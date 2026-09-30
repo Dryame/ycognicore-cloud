@@ -1,11 +1,29 @@
-# Rapport Journalier n°10
 
-**Projet :** yCogniCore Cloud — Plateforme ERP SaaS
-**Phase :** Phase 1 — Socle Invariable
-**Date :** 30 septembre 2026
+<div align="center">
+
+![Logo yCogniCore Cloud](/home/idrissa_yameogo/projets/ycognicore-cloud/docs/rapports/assets/logo.png)
+
+# **yCogniCore Cloud**
+
+### Plateforme ERP SaaS multi-tenant
+
+---
+
+## Rapport Journalier n°10
+
+**Sprint H0 — Socle Invariable**
+
 **Auteur :** Yameogo Idrissa
+**Date :** 30 septembre 2026
 **Version :** 2.0
-**Statut :** Sprint H0 clôturé (6/6 points)
+
+---
+
+*Document produit dans le cadre du stage à SOCIETE BENJEDDOU TECHNOLOGIE*
+
+</div>
+
+\newpage
 
 ---
 
@@ -20,6 +38,35 @@
 7. [Bilan et prochaines étapes](#7-bilan-et-prochaines-étapes)
 
 ---
+<div align="center">
+
+![Logo yCogniCore Cloud](/home/idrissa_yameogo/projets/ycognicore-cloud/docs/rapports/assets/logo.png)
+
+# **yCogniCore Cloud**
+
+## Plateforme ERP SaaS multi-tenant
+
+---
+
+### Rapport Journalier n°10
+
+**Sprint H0 — Socle Invariable**
+
+---
+
+**Auteur :** Yameogo Idrissa
+**Date :** 30 septembre 2026
+**Version :** 2.0
+
+---
+
+*Document confidentiel — Stage SOCIETE BENJEDDOU TECHNOLOGIE*
+
+</div>
+
+\newpage
+
+
 
 ## 1. Contexte de la journée
 
@@ -101,7 +148,32 @@ La journée s'est organisée en **7 blocs séquentiels**, chacun avec des object
 
 **Résultat :** environnement préparé, sauvegarde créée, arborescence propre.
 
+![Création de la sauvegarde horodatée db.backup-20260930-094319/.](/home/idrissa_yameogo/projets/ycognicore-cloud/docs/rapports/captures/10/03-sauvegarde.png)
+
+*Création de la sauvegarde horodatée db.backup-20260930-094319/.*
+
+
+![Arborescence initiale : 6 fichiers SQL (V1-V3 CP + V1-V3 Tenant).](/home/idrissa_yameogo/projets/ycognicore-cloud/docs/rapports/captures/10/02-arborescence-initiale.png)
+
+*Arborescence initiale : 6 fichiers SQL (V1-V3 CP + V1-V3 Tenant).*
+
+
+![État des conteneurs Docker au démarrage de la journée.](/home/idrissa_yameogo/projets/ycognicore-cloud/docs/rapports/captures/10/01-docker-ps.png)
+
+*État des conteneurs Docker au démarrage de la journée.*
+
+
 **Durée effective :** 30 minutes.
+
+![État final Git : historique des commits et tags de la journée.](/home/idrissa_yameogo/projets/ycognicore-cloud/docs/rapports/captures/10/51-etat-final-git.png)
+
+*État final Git : historique des commits et tags de la journée.*
+
+
+![Commit BL-004 : intégration Flyway + ADRs 008/009/010.](/home/idrissa_yameogo/projets/ycognicore-cloud/docs/rapports/captures/10/49-commit-bl004.png)
+
+*Commit BL-004 : intégration Flyway + ADRs 008/009/010.*
+
 
 ---
 
@@ -118,6 +190,11 @@ La journée s'est organisée en **7 blocs séquentiels**, chacun avec des object
 3. **Vérification par fichier** : comptage des `CREATE TABLE`, `CREATE FUNCTION`, `CREATE TRIGGER`, `CREATE INDEX`.
 
 **Résultat :** 13 fichiers SQL (6 CP + 7 Tenant) + 1 vérificateur.
+
+![Compteurs par migration (CREATE TABLE, FUNCTION, TRIGGER, lignes).](/home/idrissa_yameogo/projets/ycognicore-cloud/docs/rapports/captures/10/05-recap-migrations.png)
+
+*Compteurs par migration (CREATE TABLE, FUNCTION, TRIGGER, lignes).*
+
 
 ![13 migrations finales](/home/idrissa_yameogo/projets/ycognicore-cloud/docs/rapports/captures/10/04-13-migrations.png)
 
@@ -344,6 +421,36 @@ Table `partition_maintenance_log` avec traçabilité complète.
 | Redis PING | PONG ✅ |
 | PostgreSQL préservation | 3 bases intactes ✅ |
 
+![Test 12 Tenant : NOTICE OK — password_history append-only.](/home/idrissa_yameogo/projets/ycognicore-cloud/docs/rapports/captures/10/61-test12-tenant.png)
+
+*Test 12 Tenant : NOTICE OK — password_history append-only.*
+
+
+![Test 10 Tenant : NOTICE OK — VERROUILLE après 5 échecs.](/home/idrissa_yameogo/projets/ycognicore-cloud/docs/rapports/captures/10/60-test10-tenant.png)
+
+*Test 10 Tenant : NOTICE OK — VERROUILLE après 5 échecs.*
+
+
+![Test 6 CP : 6 fonctions critiques créées.](/home/idrissa_yameogo/projets/ycognicore-cloud/docs/rapports/captures/10/55-test6-cp.png)
+
+*Test 6 CP : 6 fonctions critiques créées.*
+
+
+![Test 5 CP : 6 triggers d'immuabilité actifs.](/home/idrissa_yameogo/projets/ycognicore-cloud/docs/rapports/captures/10/54-test5-cp.png)
+
+*Test 5 CP : 6 triggers d'immuabilité actifs.*
+
+
+![Test 4 CP : 11 colonnes critiques vérifiées.](/home/idrissa_yameogo/projets/ycognicore-cloud/docs/rapports/captures/10/53-test4-cp.png)
+
+*Test 4 CP : 11 colonnes critiques vérifiées.*
+
+
+![Test 3 CP : 0 table manquante (toutes présentes).](/home/idrissa_yameogo/projets/ycognicore-cloud/docs/rapports/captures/10/52-test3-cp.png)
+
+*Test 3 CP : 0 table manquante (toutes présentes).*
+
+
 **Tests Control Plane :**
 
 **Tests Tenant :**
@@ -402,7 +509,12 @@ Table `partition_maintenance_log` avec traçabilité complète.
 
 ### Problème 3 — Conflit Flyway / migrations manuelles
 
-**Solution :** drop + recreate de la base.
+**Solution :** drop + recreate de la base
+
+![Structure partition_maintenance_log](/home/idrissa_yameogo/projets/ycognicore-cloud/docs/rapports/captures/10/24-partition-table.png)
+
+*Figure — Structure de la table partition_maintenance_log.*
+.
 
 ### Problème 4 — Endpoint 401 Unauthorized
 

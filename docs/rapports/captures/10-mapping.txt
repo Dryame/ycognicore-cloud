@@ -1,0 +1,41 @@
+# Mapping captures → figures du rapport
+
+01-pgsty-pull.png  ←  Capture_decran_2026-09-30_144202.png
+04-13-migrations.png  ←  Capture_decran_2026-09-30_093957.png
+08-tab-detection.png  ←  Capture_decran_2026-09-30_114550.png
+09-flyway-pom.png  ←  Capture_decran_2026-09-30_114600.png
+10-validation-compilation.png  ←  Capture_decran_2026-09-30_114543.png
+11-application-yml.png  ←  Capture_decran_2026-09-30_114609.png
+16-boot4-starters.png  ←  Capture_decran_2026-09-30_114535.png
+19-flyway-history.png  ←  Capture_decran_2026-09-30_114615.png
+20-nb-tables-seeds.png  ←  Capture_decran_2026-09-30_114525.png
+21-etat-apres-seed.png  ←  Capture_decran_2026-09-30_114624.png
+22-flyway-history-7.png  ←  Capture_decran_2026-09-30_124306.png
+23-v7-created.png  ←  Capture_decran_2026-09-30_124218.png
+24-partition-table.png  ←  Capture_decran_2026-09-30_124406.png
+25-compilation-demarrage.png  ←  Capture_decran_2026-09-30_124136.png
+26-endpoint-0.png  ←  Capture_decran_2026-09-30_135446.png
+27-errors-password.png  ←  Capture_decran_2026-09-30_135400.png
+28-alter-role.png  ←  Capture_decran_2026-09-30_135451.png
+29-tenant-databases.png  ←  Capture_decran_2026-09-30_134405.png
+30-endpoint-success.png  ←  Capture_decran_2026-09-30_135456.png
+31-partitions-demo001.png  ←  Capture_decran_2026-09-30_134304.png
+32-partitions-demo002.png  ←  Capture_decran_2026-09-30_135526.png
+33-journal-cp.png  ←  Capture_decran_2026-09-30_133740.png
+35-volumes.png  ←  Capture_decran_2026-09-30_140729.png
+36-ports.png  ←  Capture_decran_2026-09-30_140714.png
+37-dumps.png  ←  Capture_decran_2026-09-30_140957.png
+38-validation-yaml.png  ←  Capture_decran_2026-09-30_140524.png
+39-images-modif.png  ←  Capture_decran_2026-09-30_141230.png
+40-test-pull.png  ←  Capture_decran_2026-09-30_145042.png
+41-docker-up.png  ←  Capture_decran_2026-09-30_145127.png
+42-healthcheck.png  ←  Capture_decran_2026-09-30_144636.png
+43-vault-healthy.png  ←  Capture_decran_2026-09-30_145455.png
+44-verif-pg.png  ←  Capture_decran_2026-09-30_144233.png
+45-tests-services.png  ←  Capture_decran_2026-09-30_145512.png
+46-init-vault-ok.png  ←  Capture_decran_2026-09-30_143906.png
+47-init-minio-ok.png  ←  Capture_decran_2026-09-30_145703.png
+48-recap-bl006.png  ←  Capture_decran_2026-09-30_143804.png
+
+Total : 36 captures assignées
+Non assignées : 29

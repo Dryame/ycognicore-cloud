@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Sélection des captures — Journalier n°10</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f5f5f5; padding: 20px; }
+        h1 { color: #1565c0; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 3px solid #0277bd; }
+        .toolbar {
+            background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px;
+            display: flex; gap: 15px; align-items: center; flex-wrap: wrap;
+            position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .toolbar input[type="text"] {
+            padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em;
+            width: 200px;
+        }
+        .toolbar button {
+            padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer;
+            font-weight: 600; font-size: 0.9em;
+        }
+        .btn-export { background: #e65100; color: white; }
+        .btn-reset { background: #eee; color: #333; }
+        .btn-filter { background: #1565c0; color: white; }
+        .stats { color: #666; font-size: 0.9em; }
+        .stats b { color: #1565c0; font-size: 1.2em; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+        }
+        .capture {
+            background: white; border-radius: 6px; overflow: hidden;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.1); cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s;
+            position: relative;
+        }
+        .capture:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+        .capture img {
+            width: 100%; height: 120px; object-fit: cover; background: #eee;
+            display: block;
+        }
+        .capture .info {
+            padding: 6px 8px; font-size: 0.7em;
+            font-family: monospace; color: #555;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .capture .badge {
+            position: absolute; top: 4px; right: 4px;
+            background: #2e7d32; color: white;
+            padding: 2px 6px; border-radius: 4px;
+            font-size: 0.7em; font-weight: bold;
+        }
+        .capture.selected { outline: 4px solid #2e7d32; }
+        .capture.selected::after {
+            content: "OK"; position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2em; color: rgba(46, 125, 50, 0.8);
+            font-weight: bold; pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Selection des captures - Journalier n10</h1>
+    
+    <div class="toolbar">
+        <span class="stats">Total : <b id="total">0</b></span>
+        <span class="stats">Selectionnees : <b id="sel-count">0</b></span>
+        <input type="text" id="filtre-heure" placeholder="Filtrer (ex: 14h, 15h)">
+        <button class="btn-filter" onclick="appliquerFiltre()">Filtrer</button>
+        <button class="btn-reset" onclick="resetFiltre()">Reset</button>
+        <button class="btn-export" onclick="exporter()">Exporter la selection</button>
+    </div>
+    
+    <div class="grid" id="grid"></div>
+    
+<script>
+const IMAGES = [
+    {"nom": "3ab5d715-584f-42ab-9fc8-e3d2f8d7254d.png", "chemin": "10-travail/3ab5d715-584f-42ab-9fc8-e3d2f8d7254d.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_093711.png", "chemin": "10-travail/Capture_décran_2026-09-30_093711.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_093957.png", "chemin": "10-travail/Capture_décran_2026-09-30_093957.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_094409.png", "chemin": "10-travail/Capture_décran_2026-09-30_094409.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_095136.png", "chemin": "10-travail/Capture_décran_2026-09-30_095136.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_095444.png", "chemin": "10-travail/Capture_décran_2026-09-30_095444.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_095748.png", "chemin": "10-travail/Capture_décran_2026-09-30_095748.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_100050.png", "chemin": "10-travail/Capture_décran_2026-09-30_100050.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_101922.png", "chemin": "10-travail/Capture_décran_2026-09-30_101922.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_102112.png", "chemin": "10-travail/Capture_décran_2026-09-30_102112.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_102250.png", "chemin": "10-travail/Capture_décran_2026-09-30_102250.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_102404.png", "chemin": "10-travail/Capture_décran_2026-09-30_102404.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_102522.png", "chemin": "10-travail/Capture_décran_2026-09-30_102522.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_103154.png", "chemin": "10-travail/Capture_décran_2026-09-30_103154.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_103244.png", "chemin": "10-travail/Capture_décran_2026-09-30_103244.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_103344.png", "chemin": "10-travail/Capture_décran_2026-09-30_103344.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_103438.png", "chemin": "10-travail/Capture_décran_2026-09-30_103438.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_103711.png", "chemin": "10-travail/Capture_décran_2026-09-30_103711.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_104235.png", "chemin": "10-travail/Capture_décran_2026-09-30_104235.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_104248.png", "chemin": "10-travail/Capture_décran_2026-09-30_104248.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_104428.png", "chemin": "10-travail/Capture_décran_2026-09-30_104428.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_104436.png", "chemin": "10-travail/Capture_décran_2026-09-30_104436.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_104823.png", "chemin": "10-travail/Capture_décran_2026-09-30_104823.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_105447.png", "chemin": "10-travail/Capture_décran_2026-09-30_105447.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_105544.png", "chemin": "10-travail/Capture_décran_2026-09-30_105544.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_105903.png", "chemin": "10-travail/Capture_décran_2026-09-30_105903.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_105920.png", "chemin": "10-travail/Capture_décran_2026-09-30_105920.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_105943.png", "chemin": "10-travail/Capture_décran_2026-09-30_105943.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_105956.png", "chemin": "10-travail/Capture_décran_2026-09-30_105956.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_105959.png", "chemin": "10-travail/Capture_décran_2026-09-30_105959.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_110008.png", "chemin": "10-travail/Capture_décran_2026-09-30_110008.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_110230.png", "chemin": "10-travail/Capture_décran_2026-09-30_110230.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_110443.png", "chemin": "10-travail/Capture_décran_2026-09-30_110443.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_110605.png", "chemin": "10-travail/Capture_décran_2026-09-30_110605.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_110805.png", "chemin": "10-travail/Capture_décran_2026-09-30_110805.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_111106.png", "chemin": "10-travail/Capture_décran_2026-09-30_111106.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_111307.png", "chemin": "10-travail/Capture_décran_2026-09-30_111307.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_113048.png", "chemin": "10-travail/Capture_décran_2026-09-30_113048.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_113115.png", "chemin": "10-travail/Capture_décran_2026-09-30_113115.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_113123.png", "chemin": "10-travail/Capture_décran_2026-09-30_113123.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_113132.png", "chemin": "10-travail/Capture_décran_2026-09-30_113132.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_113140.png", "chemin": "10-travail/Capture_décran_2026-09-30_113140.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_113156.png", "chemin": "10-travail/Capture_décran_2026-09-30_113156.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_113358.png", "chemin": "10-travail/Capture_décran_2026-09-30_113358.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_113407.png", "chemin": "10-travail/Capture_décran_2026-09-30_113407.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_113719.png", "chemin": "10-travail/Capture_décran_2026-09-30_113719.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_113728.png", "chemin": "10-travail/Capture_décran_2026-09-30_113728.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_113737.png", "chemin": "10-travail/Capture_décran_2026-09-30_113737.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_113746.png", "chemin": "10-travail/Capture_décran_2026-09-30_113746.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_113758.png", "chemin": "10-travail/Capture_décran_2026-09-30_113758.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_113810.png", "chemin": "10-travail/Capture_décran_2026-09-30_113810.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_113818.png", "chemin": "10-travail/Capture_décran_2026-09-30_113818.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_113827.png", "chemin": "10-travail/Capture_décran_2026-09-30_113827.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_113840.png", "chemin": "10-travail/Capture_décran_2026-09-30_113840.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_114304.png", "chemin": "10-travail/Capture_décran_2026-09-30_114304.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_114311.png", "chemin": "10-travail/Capture_décran_2026-09-30_114311.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_114318.png", "chemin": "10-travail/Capture_décran_2026-09-30_114318.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_114324.png", "chemin": "10-travail/Capture_décran_2026-09-30_114324.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_114331.png", "chemin": "10-travail/Capture_décran_2026-09-30_114331.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_114337.png", "chemin": "10-travail/Capture_décran_2026-09-30_114337.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_114345.png", "chemin": "10-travail/Capture_décran_2026-09-30_114345.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_114351.png", "chemin": "10-travail/Capture_décran_2026-09-30_114351.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_114516.png", "chemin": "10-travail/Capture_décran_2026-09-30_114516.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_114525.png", "chemin": "10-travail/Capture_décran_2026-09-30_114525.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_114535.png", "chemin": "10-travail/Capture_décran_2026-09-30_114535.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_114543.png", "chemin": "10-travail/Capture_décran_2026-09-30_114543.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_114550.png", "chemin": "10-travail/Capture_décran_2026-09-30_114550.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_114600.png", "chemin": "10-travail/Capture_décran_2026-09-30_114600.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_114609.png", "chemin": "10-travail/Capture_décran_2026-09-30_114609.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_114615.png", "chemin": "10-travail/Capture_décran_2026-09-30_114615.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_114624.png", "chemin": "10-travail/Capture_décran_2026-09-30_114624.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_114632.png", "chemin": "10-travail/Capture_décran_2026-09-30_114632.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_114641.png", "chemin": "10-travail/Capture_décran_2026-09-30_114641.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_115004.png", "chemin": "10-travail/Capture_décran_2026-09-30_115004.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_115017.png", "chemin": "10-travail/Capture_décran_2026-09-30_115017.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_115028.png", "chemin": "10-travail/Capture_décran_2026-09-30_115028.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_115225.png", "chemin": "10-travail/Capture_décran_2026-09-30_115225.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_115347.png", "chemin": "10-travail/Capture_décran_2026-09-30_115347.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_115436.png", "chemin": "10-travail/Capture_décran_2026-09-30_115436.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_115541.png", "chemin": "10-travail/Capture_décran_2026-09-30_115541.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_115920.png", "chemin": "10-travail/Capture_décran_2026-09-30_115920.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_120038.png", "chemin": "10-travail/Capture_décran_2026-09-30_120038.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_120114.png", "chemin": "10-travail/Capture_décran_2026-09-30_120114.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_120224.png", "chemin": "10-travail/Capture_décran_2026-09-30_120224.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_120246.png", "chemin": "10-travail/Capture_décran_2026-09-30_120246.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_120254.png", "chemin": "10-travail/Capture_décran_2026-09-30_120254.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_120343.png", "chemin": "10-travail/Capture_décran_2026-09-30_120343.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_120427.png", "chemin": "10-travail/Capture_décran_2026-09-30_120427.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_120520.png", "chemin": "10-travail/Capture_décran_2026-09-30_120520.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_120618.png", "chemin": "10-travail/Capture_décran_2026-09-30_120618.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_120726.png", "chemin": "10-travail/Capture_décran_2026-09-30_120726.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_121605.png", "chemin": "10-travail/Capture_décran_2026-09-30_121605.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_121745.png", "chemin": "10-travail/Capture_décran_2026-09-30_121745.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_121837.png", "chemin": "10-travail/Capture_décran_2026-09-30_121837.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_121921.png", "chemin": "10-travail/Capture_décran_2026-09-30_121921.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_122107.png", "chemin": "10-travail/Capture_décran_2026-09-30_122107.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_122156.png", "chemin": "10-travail/Capture_décran_2026-09-30_122156.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_122240.png", "chemin": "10-travail/Capture_décran_2026-09-30_122240.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_122806.png", "chemin": "10-travail/Capture_décran_2026-09-30_122806.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_122932.png", "chemin": "10-travail/Capture_décran_2026-09-30_122932.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_123140.png", "chemin": "10-travail/Capture_décran_2026-09-30_123140.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_123242.png", "chemin": "10-travail/Capture_décran_2026-09-30_123242.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_123256.png", "chemin": "10-travail/Capture_décran_2026-09-30_123256.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_123343.png", "chemin": "10-travail/Capture_décran_2026-09-30_123343.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_123428.png", "chemin": "10-travail/Capture_décran_2026-09-30_123428.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_123744.png", "chemin": "10-travail/Capture_décran_2026-09-30_123744.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_124136.png", "chemin": "10-travail/Capture_décran_2026-09-30_124136.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_124218.png", "chemin": "10-travail/Capture_décran_2026-09-30_124218.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_124306.png", "chemin": "10-travail/Capture_décran_2026-09-30_124306.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_124406.png", "chemin": "10-travail/Capture_décran_2026-09-30_124406.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_124453.png", "chemin": "10-travail/Capture_décran_2026-09-30_124453.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_124558.png", "chemin": "10-travail/Capture_décran_2026-09-30_124558.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_125550.png", "chemin": "10-travail/Capture_décran_2026-09-30_125550.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_125710.png", "chemin": "10-travail/Capture_décran_2026-09-30_125710.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_125728.png", "chemin": "10-travail/Capture_décran_2026-09-30_125728.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_125820.png", "chemin": "10-travail/Capture_décran_2026-09-30_125820.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_125855.png", "chemin": "10-travail/Capture_décran_2026-09-30_125855.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_130302.png", "chemin": "10-travail/Capture_décran_2026-09-30_130302.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_133740.png", "chemin": "10-travail/Capture_décran_2026-09-30_133740.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_134304.png", "chemin": "10-travail/Capture_décran_2026-09-30_134304.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_134405.png", "chemin": "10-travail/Capture_décran_2026-09-30_134405.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_134529.png", "chemin": "10-travail/Capture_décran_2026-09-30_134529.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_134544.png", "chemin": "10-travail/Capture_décran_2026-09-30_134544.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_134655.png", "chemin": "10-travail/Capture_décran_2026-09-30_134655.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_134712.png", "chemin": "10-travail/Capture_décran_2026-09-30_134712.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_134830.png", "chemin": "10-travail/Capture_décran_2026-09-30_134830.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_134840.png", "chemin": "10-travail/Capture_décran_2026-09-30_134840.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_134846.png", "chemin": "10-travail/Capture_décran_2026-09-30_134846.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_134903.png", "chemin": "10-travail/Capture_décran_2026-09-30_134903.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_135245.png", "chemin": "10-travail/Capture_décran_2026-09-30_135245.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_135400.png", "chemin": "10-travail/Capture_décran_2026-09-30_135400.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_135446.png", "chemin": "10-travail/Capture_décran_2026-09-30_135446.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_135451.png", "chemin": "10-travail/Capture_décran_2026-09-30_135451.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_135456.png", "chemin": "10-travail/Capture_décran_2026-09-30_135456.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_135526.png", "chemin": "10-travail/Capture_décran_2026-09-30_135526.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_135947.png", "chemin": "10-travail/Capture_décran_2026-09-30_135947.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_140039.png", "chemin": "10-travail/Capture_décran_2026-09-30_140039.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_140138.png", "chemin": "10-travail/Capture_décran_2026-09-30_140138.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_140212.png", "chemin": "10-travail/Capture_décran_2026-09-30_140212.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_140310.png", "chemin": "10-travail/Capture_décran_2026-09-30_140310.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_140425.png", "chemin": "10-travail/Capture_décran_2026-09-30_140425.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_140524.png", "chemin": "10-travail/Capture_décran_2026-09-30_140524.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_140714.png", "chemin": "10-travail/Capture_décran_2026-09-30_140714.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_140729.png", "chemin": "10-travail/Capture_décran_2026-09-30_140729.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_140923.png", "chemin": "10-travail/Capture_décran_2026-09-30_140923.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_140957.png", "chemin": "10-travail/Capture_décran_2026-09-30_140957.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_141055.png", "chemin": "10-travail/Capture_décran_2026-09-30_141055.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_141111.png", "chemin": "10-travail/Capture_décran_2026-09-30_141111.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_141230.png", "chemin": "10-travail/Capture_décran_2026-09-30_141230.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_141326.png", "chemin": "10-travail/Capture_décran_2026-09-30_141326.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_141423.png", "chemin": "10-travail/Capture_décran_2026-09-30_141423.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_143618.png", "chemin": "10-travail/Capture_décran_2026-09-30_143618.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_143804.png", "chemin": "10-travail/Capture_décran_2026-09-30_143804.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_143906.png", "chemin": "10-travail/Capture_décran_2026-09-30_143906.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_143954.png", "chemin": "10-travail/Capture_décran_2026-09-30_143954.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_144005.png", "chemin": "10-travail/Capture_décran_2026-09-30_144005.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_144202.png", "chemin": "10-travail/Capture_décran_2026-09-30_144202.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_144233.png", "chemin": "10-travail/Capture_décran_2026-09-30_144233.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_144323.png", "chemin": "10-travail/Capture_décran_2026-09-30_144323.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_144425.png", "chemin": "10-travail/Capture_décran_2026-09-30_144425.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_144509.png", "chemin": "10-travail/Capture_décran_2026-09-30_144509.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_144636.png", "chemin": "10-travail/Capture_décran_2026-09-30_144636.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_144649.png", "chemin": "10-travail/Capture_décran_2026-09-30_144649.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_144729.png", "chemin": "10-travail/Capture_décran_2026-09-30_144729.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_144854.png", "chemin": "10-travail/Capture_décran_2026-09-30_144854.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_145042.png", "chemin": "10-travail/Capture_décran_2026-09-30_145042.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_145127.png", "chemin": "10-travail/Capture_décran_2026-09-30_145127.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_145308.png", "chemin": "10-travail/Capture_décran_2026-09-30_145308.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_145435.png", "chemin": "10-travail/Capture_décran_2026-09-30_145435.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_145455.png", "chemin": "10-travail/Capture_décran_2026-09-30_145455.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_145512.png", "chemin": "10-travail/Capture_décran_2026-09-30_145512.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_145640.png", "chemin": "10-travail/Capture_décran_2026-09-30_145640.png", "heure": "?"},
+    {"nom": "Capture_décran_2026-09-30_145703.png", "chemin": "10-travail/Capture_décran_2026-09-30_145703.png", "heure": "?"},
+    {"nom": "be8249a5-4204-401e-ab05-45692d719008.png", "chemin": "10-travail/be8249a5-4204-401e-ab05-45692d719008.png", "heure": "?"},
+    {"nom": "d19191ae-8738-415f-9373-3bea4439473d.png", "chemin": "10-travail/d19191ae-8738-415f-9373-3bea4439473d.png", "heure": "?"},
+    {"nom": "f405cb24-f8bc-4ccd-8171-b626f5952426.png", "chemin": "10-travail/f405cb24-f8bc-4ccd-8171-b626f5952426.png", "heure": "?"},
+];
+const selection = new Set();
+
+function render(liste) {
+    document.getElementById('grid').innerHTML = liste.map(img => {
+        const isSelected = selection.has(img.nom);
+        return `
+            <div class="capture ${isSelected ? 'selected' : ''}" 
+                 onclick="toggle('${img.nom}')">
+                <img src="${img.chemin}" loading="lazy">
+                ${isSelected ? '<div class="badge">SELECTIONNEE</div>' : ''}
+                <div class="info">${img.nom}</div>
+            </div>
+        `;
+    }).join('');
+    document.getElementById('total').textContent = liste.length;
+    document.getElementById('sel-count').textContent = selection.size;
+}
+
+function toggle(nom) {
+    if (selection.has(nom)) selection.delete(nom);
+    else selection.add(nom);
+    render(IMAGES);
+}
+
+function appliquerFiltre() {
+    const f = document.getElementById('filtre-heure').value.trim();
+    if (!f) { render(IMAGES); return; }
+    const filtree = IMAGES.filter(img => img.nom.includes(f));
+    render(filtree);
+}
+
+function resetFiltre() {
+    document.getElementById('filtre-heure').value = '';
+    render(IMAGES);
+}
+
+function exporter() {
+    if (selection.size === 0) { alert('Aucune capture selectionnee.'); return; }
+    const lignes = ['# Selection finale des captures\n', 'Total : ' + selection.size + '\n'];
+    let i = 1;
+    for (const nom of Array.from(selection).sort()) {
+        lignes.push(i + '. ' + nom);
+        i++;
+    }
+    const blob = new Blob([lignes.join('\n')], { type: 'text/markdown' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'captures_selectionnees.md';
+    a.click();
+}
+
+render(IMAGES);
+</script>
+</body>
+</html>

@@ -96,3 +96,7 @@ database/dumps/
 *.backup-*
 pom.xml.backup*
 *.properties.backup
+
+# Backups infra
+infra/*.backup*
+infra/**/*.backup*

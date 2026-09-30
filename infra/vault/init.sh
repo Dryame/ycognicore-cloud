@@ -1,51 +1,34 @@
 #!/usr/bin/env bash
 # =====================================================================
-# init.sh — Initialisation de Vault (mode dev)
-# Crée :
-#   - Transit engine (chiffrement)
-#   - Clé ycc-mfa-key (pour les secrets MFA)
+# init.sh — Initialisation Vault via docker exec
+# Active le moteur transit et crée la clé ycc-mfa-key
+# Note : le CLI vault est dans le conteneur, pas sur l'hôte
 # =====================================================================
 set -euo pipefail
 
-VAULT_ADDR="${VAULT_ADDR:-http://localhost:8200}"
+CONTAINER="${VAULT_CONTAINER:-vault-ycc}"
 VAULT_TOKEN="${VAULT_TOKEN:-ycc-dev-token}"
 
-export VAULT_ADDR VAULT_TOKEN
-
 echo "═══════════════════════════════════════════════════════"
-echo "  INIT VAULT — $VAULT_ADDR"
+echo "  INIT VAULT"
 echo "═══════════════════════════════════════════════════════"
 
-# Attendre que Vault soit prêt
 echo ""
-echo "[1/4] Attente de Vault..."
-for i in {1..30}; do
-    if vault status >/dev/null 2>&1; then
-        echo "  ✅ Vault prêt (après ${i}s)"
-        break
-    fi
-    sleep 1
-done
+echo "[1/3] Activation du moteur transit..."
+docker exec -e VAULT_TOKEN="$VAULT_TOKEN" "$CONTAINER" \
+    vault secrets enable -path=transit transit 2>&1 | tail -1
 
-# Activer le moteur transit (chiffrement)
 echo ""
-echo "[2/4] Activation du moteur transit..."
-vault secrets enable -path=transit transit 2>/dev/null || echo "  (déjà activé)"
+echo "[2/3] Création de la clé ycc-mfa-key..."
+docker exec -e VAULT_TOKEN="$VAULT_TOKEN" "$CONTAINER" \
+    vault write -f transit/keys/ycc-mfa-key 2>&1 | tail -1
 
-# Créer la clé ycc-mfa-key
 echo ""
-echo "[3/4] Création de la clé ycc-mfa-key..."
-vault write -f transit/keys/ycc-mfa-key 2>&1 | tail -5 || echo "  (déjà existante)"
-
-# Vérification
-echo ""
-echo "[4/4] Vérification..."
-vault list transit/keys
+echo "[3/3] Vérification des clés..."
+docker exec -e VAULT_TOKEN="$VAULT_TOKEN" "$CONTAINER" \
+    vault list transit/keys
 
 echo ""
 echo "═══════════════════════════════════════════════════════"
-echo "  ✅ VAULT INITIALISÉ"
+echo "  VAULT INITIALISE"
 echo "═══════════════════════════════════════════════════════"
-echo "  Token : $VAULT_TOKEN"
-echo "  Clé   : ycc-mfa-key"
-echo ""

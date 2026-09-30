@@ -1,0 +1,49 @@
+# =====================================================================
+# application.yml — Configuration Spring Boot 4
+# Réf. : ADR-008 (Spring Boot 4), ADR-009 (Angular 22)
+# =====================================================================
+
+spring:
+  application:
+    name: ycognicore-backend
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ycc_control_plane
+    username: postgres
+    password: ${PG_ADMIN_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations:
+      - classpath:db/migration/control-plane
+    schemas: public
+    validate-on-migrate: true
+    out-of-order: false
+    clean-disabled: true
+
+logging:
+  level:
+    root: INFO
+    org.flywaydb: INFO
+    bf.ycognicore: DEBUG
+
+server:
+  port: 8080

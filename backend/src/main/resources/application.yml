@@ -47,3 +47,16 @@ logging:
 
 server:
   port: 8080
+
+# ---------------------------------------------------------------------
+# Configuration yCogniCore
+# ---------------------------------------------------------------------
+ycc:
+  partition:
+    # Nombre de mois à anticiper (3 = mois courant + 2 suivants)
+    months-ahead: 3
+    # Cron : 1er de chaque mois à 02h00
+    cron: "0 0 2 1 * *"
+    # Connexion aux bases tenant
+    db-host: ${PG_HOST:localhost}
+    db-password: ${PG_ADMIN_PASSWORD:postgres}

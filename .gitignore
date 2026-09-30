@@ -91,3 +91,8 @@ Thumbs.db
 db.backup-*/
 database/dumps/
 *.backup
+
+# Sauvegardes pom.xml et fichiers temporaires
+*.backup-*
+pom.xml.backup*
+*.properties.backup

@@ -82,3 +82,12 @@ docker-compose.override.yml
 *.swo
 .DS_Store
 Thumbs.db
+*.pyc
+*.pyo
+
+# ============================================================
+# # 8. SAUVEGARDES LOCALES & DUMPS (ajout 30/09/2026)
+# ============================================================
+db.backup-*/
+database/dumps/
+*.backup

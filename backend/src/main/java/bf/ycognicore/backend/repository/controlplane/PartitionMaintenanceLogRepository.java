@@ -8,8 +8,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Repository
-public interface PartitionMaintenanceLogRepository
-        extends JpaRepository<PartitionMaintenanceLog, Long> {
+public interface PartitionMaintenanceLogRepository extends JpaRepository<PartitionMaintenanceLog, Long> {
 
     List<PartitionMaintenanceLog> findByTenantIdOrderByExecuteLeDesc(UUID tenantId);
 

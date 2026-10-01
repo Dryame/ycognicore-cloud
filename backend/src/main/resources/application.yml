@@ -1,62 +1,56 @@
-# =====================================================================
-# application.yml — Configuration Spring Boot 4
-# Réf. : ADR-008 (Spring Boot 4), ADR-009 (Angular 22)
-# =====================================================================
-
 spring:
   application:
-    name: ycognicore-backend
-
+    name: backend
   datasource:
     url: jdbc:postgresql://localhost:5432/ycc_control_plane
     username: postgres
-    password: ${PG_ADMIN_PASSWORD:postgres}
-    driver-class-name: org.postgresql.Driver
+    password: postgres
     hikari:
-      maximum-pool-size: 10
-      minimum-idle: 2
-      connection-timeout: 30000
-
+      pool-name: cp-pool
+      maximum-pool-size: 5
+      minimum-idle: 1
   jpa:
-    hibernate:
-      ddl-auto: validate
-    show-sql: true
     open-in-view: false
-    properties:
-      hibernate:
-        format_sql: true
-        jdbc:
-          time_zone: UTC
-
   flyway:
     enabled: true
     baseline-on-migrate: true
     baseline-version: 0
-    locations:
-      - classpath:db/migration/control-plane
+    locations: classpath:db/migration/control-plane
     schemas: public
     validate-on-migrate: true
     out-of-order: false
     clean-disabled: true
 
+ycc:
+  vault:
+    url: ${VAULT_URL:http://localhost:8200}
+    token: ${VAULT_TOKEN:ycc-dev-token}
+    transit-key: ycc-mfa-key
+    issuer: "yCogniCore Cloud"
+  jwt:
+    # SECRET DEMO - remplacer en prod via : openssl rand -base64 64
+    secret: "ZGVtby1zZWNyZXQtcmVwbGFjZS1tZS1pbi1wcm9kdWN0aW9uLXVzaW5nLW9wZW5zc2wtcmFuZC1iYXNlNjQtNjQtcGxlYXNlLXJlcGxhY2UtbWU="
+    access-token-expiration-minutes: 30
+    refresh-token-expiration-days: 7
+  multitenant:
+    tenant-pool:
+      maximum-pool-size: 5
+      minimum-idle: 1
+      connection-timeout-ms: 10000
+      idle-timeout-ms: 300000
+      max-lifetime-ms: 900000
+    lookup-cache-ttl-seconds: 300
+  partition:
+    months-ahead: 3
+    cron: "0 0 2 1 * *"
+    db-host: ${PG_HOST:localhost}
+    db-password: ${PG_ADMIN_PASSWORD:postgres}
+
 logging:
   level:
     root: INFO
-    org.flywaydb: INFO
     bf.ycognicore: DEBUG
+    org.hibernate.SQL: DEBUG
 
 server:
   port: 8080
-
-# ---------------------------------------------------------------------
-# Configuration yCogniCore
-# ---------------------------------------------------------------------
-ycc:
-  partition:
-    # Nombre de mois à anticiper (3 = mois courant + 2 suivants)
-    months-ahead: 3
-    # Cron : 1er de chaque mois à 02h00
-    cron: "0 0 2 1 * *"
-    # Connexion aux bases tenant
-    db-host: ${PG_HOST:localhost}
-    db-password: ${PG_ADMIN_PASSWORD:postgres}

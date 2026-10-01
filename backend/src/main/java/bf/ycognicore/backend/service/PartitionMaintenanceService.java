@@ -4,8 +4,10 @@ import bf.ycognicore.backend.entity.controlplane.PartitionMaintenanceLog;
 import bf.ycognicore.backend.repository.controlplane.PartitionMaintenanceLogRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.sql.DataSource;
 import java.sql.*;
@@ -24,11 +26,13 @@ import java.util.UUID;
  * Réf. : BL-005, NFR-CONF-04, NFR-OPS-04
  */
 @Service
+@Transactional("controlPlaneTransactionManager")
 public class PartitionMaintenanceService {
 
     private static final Logger logger = LoggerFactory.getLogger(PartitionMaintenanceService.class);
     private static final DateTimeFormatter FORMAT_PARTITION = DateTimeFormatter.ofPattern("yyyy_MM");
 
+    @Qualifier("controlPlaneDataSource")
     private final DataSource controlPlaneDataSource;
     private final PartitionMaintenanceLogRepository logRepository;
 
@@ -41,7 +45,7 @@ public class PartitionMaintenanceService {
     @Value("${ycc.partition.db-host:localhost}")
     private String dbHost;
 
-    public PartitionMaintenanceService(DataSource controlPlaneDataSource,
+    public PartitionMaintenanceService(@Qualifier("controlPlaneDataSource") DataSource controlPlaneDataSource,
                                        PartitionMaintenanceLogRepository logRepository) {
         this.controlPlaneDataSource = controlPlaneDataSource;
         this.logRepository = logRepository;

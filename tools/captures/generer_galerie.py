@@ -1,47 +1,39 @@
 #!/usr/bin/env python3
 """
 generer_galerie.py — Génère une galerie HTML pour sélection visuelle
+Usage : python3 generer_galerie.py
 """
+import os
 import re
 from pathlib import Path
+from datetime import datetime
 
 RACINE = Path.home() / "projets" / "ycognicore-cloud"
 SRC = RACINE / "docs/rapports/captures/10-travail"
-DEST_HTML = SRC / "galerie.html"
+DEST_HTML = RACINE / "docs/rapports/captures/10-travail/galerie.html"
 
 print("═══════════════════════════════════════════════════════")
 print("  GÉNÉRATION DE LA GALERIE HTML")
 print("═══════════════════════════════════════════════════════")
 
-if not SRC.exists():
-    print(f"  ❌ Dossier source introuvable : {SRC}")
-    exit(1)
-
-# Lister les images
+# Lister toutes les images
 images = []
 for f in sorted(SRC.glob("*.png")):
     stats = f.stat()
+    # Extraire l'heure depuis le nom si possible
     match = re.search(r'(\d{2})h(\d{2})m', f.name)
-    heure = f"{match.group(1)}h{match.group(2)}" if match else "?"
+    heure = f"{match.group(1)}:{match.group(2)}" if match else "?"
+
     images.append({
         "nom": f.name,
         "chemin": f"10-travail/{f.name}",
-        "taille": stats.st_size // 1024,
+        "taille": stats.st_size // 1024,  # Ko
         "heure": heure,
     })
 
 print(f"  → {len(images)} images trouvées")
 
-if len(images) == 0:
-    print("  ❌ Aucune image à afficher")
-    exit(1)
-
-# Construire le JSON des images
-images_json = "[\n"
-for img in images:
-    images_json += f'    {{"nom": "{img["nom"]}", "chemin": "{img["chemin"]}", "heure": "{img["heure"]}"}},\n'
-images_json += "]"
-
+# Générer HTML
 html = """<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -65,6 +57,7 @@ html = """<!DOCTYPE html>
             font-weight: 600; font-size: 0.9em;
         }
         .btn-export { background: #e65100; color: white; }
+        .btn-export:hover { background: #bf360c; }
         .btn-reset { background: #eee; color: #333; }
         .btn-filter { background: #1565c0; color: white; }
         .stats { color: #666; font-size: 0.9em; }
@@ -98,23 +91,23 @@ html = """<!DOCTYPE html>
         }
         .capture.selected { outline: 4px solid #2e7d32; }
         .capture.selected::after {
-            content: "OK"; position: absolute; top: 50%; left: 50%;
+            content: "✓"; position: absolute; top: 50%; left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 2em; color: rgba(46, 125, 50, 0.8);
+            font-size: 4em; color: rgba(46, 125, 50, 0.7);
             font-weight: bold; pointer-events: none;
         }
     </style>
 </head>
 <body>
-    <h1>Selection des captures - Journalier n10</h1>
+    <h1>📸 Sélection des captures — Journalier n°10</h1>
     
     <div class="toolbar">
         <span class="stats">Total : <b id="total">0</b></span>
-        <span class="stats">Selectionnees : <b id="sel-count">0</b></span>
-        <input type="text" id="filtre-heure" placeholder="Filtrer (ex: 14h, 15h)">
+        <span class="stats">Sélectionnées : <b id="sel-count">0</b></span>
+        <input type="text" id="filtre-heure" placeholder="Filtrer par heure (ex: 15)">
         <button class="btn-filter" onclick="appliquerFiltre()">Filtrer</button>
         <button class="btn-reset" onclick="resetFiltre()">Reset</button>
-        <button class="btn-export" onclick="exporter()">Exporter la selection</button>
+        <button class="btn-export" onclick="exporter()">💾 Exporter la sélection</button>
     </div>
     
     <div class="grid" id="grid"></div>
@@ -128,10 +121,12 @@ function render(liste) {
         const isSelected = selection.has(img.nom);
         return `
             <div class="capture ${isSelected ? 'selected' : ''}" 
+                 data-nom="${img.nom}"
                  onclick="toggle('${img.nom}')">
-                <img src="${img.chemin}" loading="lazy">
-                ${isSelected ? '<div class="badge">SELECTIONNEE</div>' : ''}
-                <div class="info">${img.nom}</div>
+                <img src="${img.chemin}" loading="lazy" 
+                     onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22120%22%3E%3Ctext x=%22100%22 y=%2265%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2214%22%3E${img.nom}%3C/text%3E%3C/svg%3E'">
+                ${isSelected ? '<div class="badge">SÉLECTIONNÉE</div>' : ''}
+                <div class="info">${img.nom.replace(/_/g, ' ')}</div>
             </div>
         `;
     }).join('');
@@ -158,14 +153,14 @@ function resetFiltre() {
 }
 
 function exporter() {
-    if (selection.size === 0) { alert('Aucune capture selectionnee.'); return; }
-    const lignes = ['# Selection finale des captures\\n', 'Total : ' + selection.size + '\\n'];
+    if (selection.size === 0) { alert('Aucune capture sélectionnée.'); return; }
+    const lignes = ['# Sélection finale des captures\n', `Total : ${selection.size}\n`];
     let i = 1;
     for (const nom of Array.from(selection).sort()) {
-        lignes.push(i + '. ' + nom);
+        lignes.push(`${i}. ${nom}`);
         i++;
     }
-    const blob = new Blob([lignes.join('\\n')], { type: 'text/markdown' });
+    const blob = new Blob([lignes.join('\n')], { type: 'text/markdown' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'captures_selectionnees.md';
@@ -178,11 +173,23 @@ render(IMAGES);
 </html>
 """
 
+# Remplacer le placeholder
+images_json = "[\n"
+for img in images:
+    images_json += f'    {{"nom": "{img["nom"]}", "chemin": "{img["chemin"]}", "heure": "{img["heure"]}"}},\n'
+images_json += "]"
+
 html = html.replace("IMAGES_PLACEHOLDER", images_json)
+
 DEST_HTML.write_text(html, encoding="utf-8")
 
-print(f"  OK - Galerie generee : {DEST_HTML}")
+print(f"  ✅ Galerie générée : {DEST_HTML}")
 print("")
-print("  Ouvrez dans un navigateur :")
-print(f"  file://{DEST_HTML}")
+print("═══════════════════════════════════════════════════════")
+print("  OUVREZ LA GALERIE DANS UN NAVIGATEUR :")
+print("═══════════════════════════════════════════════════════")
+print("")
+print(f"  firefox {DEST_HTML}")
+print(f"  ou")
+print(f"  google-chrome {DEST_HTML}")
 print("")

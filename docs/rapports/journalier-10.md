@@ -148,6 +148,11 @@ La journée s'est organisée en **7 blocs séquentiels**, chacun avec des object
 
 **Résultat :** environnement préparé, sauvegarde créée, arborescence propre.
 
+![01 pgsty pull](/home/idrissa_yameogo/projets/ycognicore-cloud/docs/rapports/captures/10/01-pgsty-pull.png)
+
+*01 pgsty pull*
+
+
 ![Création de la sauvegarde horodatée db.backup-20260930-094319/.](/home/idrissa_yameogo/projets/ycognicore-cloud/docs/rapports/captures/10/03-sauvegarde.png)
 
 *Création de la sauvegarde horodatée db.backup-20260930-094319/.*
@@ -579,6 +584,134 @@ Table `partition_maintenance_log` avec traçabilité complète.
 | Tests réussis | 22 |
 
 ---
+
+
+
+\newpage
+
+---
+
+## Annexe — Galerie complète des captures
+
+*Cette annexe regroupe les 19 captures complémentaires produites durant la journée du 30 septembre 2026.*
+
+### A.1 — 20 nb tables seeds
+
+![20 nb tables seeds](/home/idrissa_yameogo/projets/ycognicore-cloud/docs/rapports/captures/10/20-nb-tables-seeds.png)
+
+*Figure A.1 — 20 nb tables seeds.*
+
+### A.2 — 21 etat apres seed
+
+![21 etat apres seed](/home/idrissa_yameogo/projets/ycognicore-cloud/docs/rapports/captures/10/21-etat-apres-seed.png)
+
+*Figure A.2 — 21 etat apres seed.*
+
+### A.3 — 22 flyway history 7
+
+![22 flyway history 7](/home/idrissa_yameogo/projets/ycognicore-cloud/docs/rapports/captures/10/22-flyway-history-7.png)
+
+*Figure A.3 — 22 flyway history 7.*
+
+### A.4 — 25 compilation demarrage
+
+![25 compilation demarrage](/home/idrissa_yameogo/projets/ycognicore-cloud/docs/rapports/captures/10/25-compilation-demarrage.png)
+
+*Figure A.4 — 25 compilation demarrage.*
+
+### A.5 — 26 endpoint 0
+
+![26 endpoint 0](/home/idrissa_yameogo/projets/ycognicore-cloud/docs/rapports/captures/10/26-endpoint-0.png)
+
+*Figure A.5 — 26 endpoint 0.*
+
+### A.6 — 27 errors password
+
+![27 errors password](/home/idrissa_yameogo/projets/ycognicore-cloud/docs/rapports/captures/10/27-errors-password.png)
+
+*Figure A.6 — 27 errors password.*
+
+### A.7 — 28 alter role
+
+![28 alter role](/home/idrissa_yameogo/projets/ycognicore-cloud/docs/rapports/captures/10/28-alter-role.png)
+
+*Figure A.7 — 28 alter role.*
+
+### A.8 — 29 tenant databases
+
+![29 tenant databases](/home/idrissa_yameogo/projets/ycognicore-cloud/docs/rapports/captures/10/29-tenant-databases.png)
+
+*Figure A.8 — 29 tenant databases.*
+
+### A.9 — 32 partitions demo002
+
+![32 partitions demo002](/home/idrissa_yameogo/projets/ycognicore-cloud/docs/rapports/captures/10/32-partitions-demo002.png)
+
+*Figure A.9 — 32 partitions demo002.*
+
+### A.10 — 36 ports
+
+![36 ports](/home/idrissa_yameogo/projets/ycognicore-cloud/docs/rapports/captures/10/36-ports.png)
+
+*Figure A.10 — 36 ports.*
+
+### A.11 — 37 dumps
+
+![37 dumps](/home/idrissa_yameogo/projets/ycognicore-cloud/docs/rapports/captures/10/37-dumps.png)
+
+*Figure A.11 — 37 dumps.*
+
+### A.12 — 39 images modif
+
+![39 images modif](/home/idrissa_yameogo/projets/ycognicore-cloud/docs/rapports/captures/10/39-images-modif.png)
+
+*Figure A.12 — 39 images modif.*
+
+### A.13 — 40 test pull
+
+![40 test pull](/home/idrissa_yameogo/projets/ycognicore-cloud/docs/rapports/captures/10/40-test-pull.png)
+
+*Figure A.13 — 40 test pull.*
+
+### A.14 — 42 healthcheck
+
+![42 healthcheck](/home/idrissa_yameogo/projets/ycognicore-cloud/docs/rapports/captures/10/42-healthcheck.png)
+
+*Figure A.14 — 42 healthcheck.*
+
+### A.15 — 43 vault healthy
+
+![43 vault healthy](/home/idrissa_yameogo/projets/ycognicore-cloud/docs/rapports/captures/10/43-vault-healthy.png)
+
+*Figure A.15 — 43 vault healthy.*
+
+### A.16 — 44 verif pg
+
+![44 verif pg](/home/idrissa_yameogo/projets/ycognicore-cloud/docs/rapports/captures/10/44-verif-pg.png)
+
+*Figure A.16 — 44 verif pg.*
+
+### A.17 — 45 tests services
+
+![45 tests services](/home/idrissa_yameogo/projets/ycognicore-cloud/docs/rapports/captures/10/45-tests-services.png)
+
+*Figure A.17 — 45 tests services.*
+
+### A.18 — 46 init vault ok
+
+![46 init vault ok](/home/idrissa_yameogo/projets/ycognicore-cloud/docs/rapports/captures/10/46-init-vault-ok.png)
+
+*Figure A.18 — 46 init vault ok.*
+
+### A.19 — 47 init minio ok
+
+![47 init minio ok](/home/idrissa_yameogo/projets/ycognicore-cloud/docs/rapports/captures/10/47-init-minio-ok.png)
+
+*Figure A.19 — 47 init minio ok.*
+
+
+
+\newpage
 
 ## 7. Bilan et prochaines étapes
 

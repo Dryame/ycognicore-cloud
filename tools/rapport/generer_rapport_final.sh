@@ -1,23 +1,22 @@
 #!/usr/bin/env bash
 # =====================================================================
 # generer_rapport_final.sh
-# Génère le rapport journalier n°10 complet :
-#   1. Vérifie l'environnement (Python, Pandoc, LibreOffice)
-#   2. Génère les 25 captures PNG via Python + Pillow
-#   3. Insère toutes les figures dans le Markdown
-#   4. Ajoute la page de garde avec logo
-#   5. Convertit en Word (.docx)
-#   6. Convertit en PDF
-#   7. Commit Git + Tag
+# Copie les captures Windows, les renomme, génère le rapport Word
 # =====================================================================
-set -uo pipefail
+set -euo pipefail
 
+# ---- Configuration -------------------------------------------------
 RACINE="$HOME/projets/ycognicore-cloud"
-CAPTURES="$RACINE/docs/rapports/captures/10"
+
+# Chemin Windows (source)
+WIN_PATH="/mnt/c/Users/Tedis/Documents/Yameogo Idrissa/STAGE/SOCIETE BENJEDDOU TECHNOLOGIE/captures"
+
+# Dossiers cibles
+CAPTURES_WORK="$RACINE/docs/rapports/captures/10-travail"
+CAPTURES_FINAL="$RACINE/docs/rapports/captures/10"
 ASSETS="$RACINE/docs/rapports/assets"
-EXPORT="$RACINE/docs/rapports/export"
-RAPPORT="$RACINE/docs/rapports/journalier-10.md"
-LOGO="$ASSETS/logo.png"
+SORTIE="$RACINE/docs/rapports/export"
+RAPPORT_MD="$RACINE/docs/rapports/journalier-10.md"
 
 # Couleurs
 VERT='\033[0;32m'
@@ -26,298 +25,292 @@ ROUGE='\033[0;31m'
 BLEU='\033[0;34m'
 NC='\033[0m'
 
-# =====================================================================
-echo ""
+# ---- En-tête -------------------------------------------------------
+clear
 echo "═══════════════════════════════════════════════════════"
-echo "  GÉNÉRATION DU RAPPORT JOURNALIER N°10 — VERSION FINALE"
+echo "  GÉNÉRATION FINALE DU RAPPORT JOURNALIER N°10"
 echo "═══════════════════════════════════════════════════════"
 echo ""
 
-# =====================================================================
-#  ÉTAPE 1 — Vérifications préalables
-# =====================================================================
+# ---- Étape 1 — Vérifications --------------------------------------
 echo "[1/7] Vérifications préalables..."
-echo ""
 
-# Python + Pillow
-if ! python3 -c "from PIL import Image" 2>/dev/null; then
-    echo -e "  ${ROUGE}❌ Pillow absent${NC}"
-    echo "     → sudo apt install -y python3-pil"
+if [ ! -d "$WIN_PATH" ]; then
+    echo -e "  ${ROUGE}❌ Chemin Windows introuvable${NC}"
+    echo "     $WIN_PATH"
     exit 1
 fi
-echo -e "  ${VERT}✅${NC} Python + Pillow"
+NB_TOTAL=$(find "$WIN_PATH" -maxdepth 1 -type f -iname "*.png" 2>/dev/null | wc -l)
+echo -e "  ${VERT}✅${NC} Captures trouvées : $NB_TOTAL fichiers PNG"
 
-# Pandoc
+if [ ! -f "$RAPPORT_MD" ]; then
+    echo -e "  ${JAUNE}⚠${NC} Rapport Markdown absent — il sera créé"
+fi
+
 if ! command -v pandoc &>/dev/null; then
-    echo -e "  ${ROUGE}❌ Pandoc absent${NC}"
+    echo -e "  ${ROUGE}❌ Pandoc non installé${NC}"
     echo "     → sudo apt install -y pandoc"
     exit 1
 fi
-echo -e "  ${VERT}✅${NC} Pandoc ($(pandoc --version | head -1 | awk '{print $2}'))"
+echo -e "  ${VERT}✅${NC} Pandoc disponible"
 
-# LibreOffice (optionnel)
-if command -v libreoffice &>/dev/null; then
-    echo -e "  ${VERT}✅${NC} LibreOffice (PDF activé)"
-    HAS_LIBREOFFICE=1
-else
-    echo -e "  ${JAUNE}⚠${NC} LibreOffice absent (PDF ignoré)"
-    HAS_LIBREOFFICE=0
-fi
-
-# Rapport Markdown
-if [ ! -f "$RAPPORT" ]; then
-    echo -e "  ${ROUGE}❌ Rapport introuvable : $RAPPORT${NC}"
-    exit 1
-fi
-echo -e "  ${VERT}✅${NC} Rapport Markdown présent"
-
-# Créer les dossiers
-mkdir -p "$CAPTURES" "$ASSETS" "$EXPORT"
-
-# =====================================================================
-#  ÉTAPE 2 — Génération des captures PNG
-# =====================================================================
+# ---- Étape 2 — Création de l'arborescence -------------------------
 echo ""
-echo "[2/7] Génération des captures PNG..."
+echo "[2/7] Création de l'arborescence..."
 
-if [ ! -f "$RACINE/tools/captures/generer_captures.py" ]; then
-    echo -e "  ${JAUNE}⚠${NC} Script de génération absent — ignoré"
-else
-    python3 "$RACINE/tools/captures/generer_captures.py" 2>&1 | tail -5
-fi
+mkdir -p "$CAPTURES_WORK"
+mkdir -p "$CAPTURES_FINAL"
+mkdir -p "$ASSETS"
+mkdir -p "$SORTIE"
 
-NB_CAPTURES=$(ls -1 "$CAPTURES"/*.png 2>/dev/null | wc -l)
-echo -e "  ${VERT}✅${NC} $NB_CAPTURES captures disponibles"
+echo -e "  ${VERT}✅${NC} Dossiers créés"
 
-# =====================================================================
-#  ÉTAPE 3 — Insertion des figures dans le Markdown
-# =====================================================================
+# ---- Étape 3 — Copie des captures ---------------------------------
 echo ""
-echo "[3/7] Insertion des figures dans le rapport..."
+echo "[3/7] Copie des captures depuis Windows..."
 
+# Nettoyer le dossier de travail précédent
+rm -f "$CAPTURES_WORK"/*.png 2>/dev/null || true
+
+COUNT=0
+find "$WIN_PATH" -maxdepth 1 -type f -iname "*.png" | while read -r fichier; do
+    nom=$(basename "$fichier")
+    # Nettoyer le nom (espaces, apostrophes, accents)
+    nom_clean=$(echo "$nom" | sed 's/ /_/g' | sed "s/'//g" | sed 's/é/e/g' | sed 's/è/e/g')
+    cp "$fichier" "$CAPTURES_WORK/$nom_clean"
+    COUNT=$((COUNT + 1))
+done
+
+NB_COPIES=$(ls -1 "$CAPTURES_WORK"/*.png 2>/dev/null | wc -l)
+echo -e "  ${VERT}✅${NC} $NB_COPIES captures copiées dans 10-travail/"
+
+# ---- Étape 4 — Génération du mapping intelligent ------------------
+echo ""
+echo "[4/7] Analyse des captures par horodatage..."
+
+# Script Python pour générer un mapping intelligent basé sur les horaires
 python3 << 'PYEOF'
-from pathlib import Path
 import re
+import shutil
+from pathlib import Path
+from datetime import datetime
 
-RAPPORT = Path.home() / "projets" / "ycognicore-cloud" / "docs/rapports/journalier-10.md"
-CAPTURES = Path.home() / "projets" / "ycognicore-cloud" / "docs/rapports/captures/10"
+RACINE = Path.home() / "projets" / "ycognicore-cloud"
+SRC = RACINE / "docs/rapports/captures/10-travail"
+DEST = RACINE / "docs/rapports/captures/10"
 
-contenu = RAPPORT.read_text(encoding="utf-8")
+def extraire_datetime(img):
+    """Extrait la datetime depuis le nom ou le mtime"""
+    # Format : Capture_d'écran_2026-09-30_145703.png
+    m = re.search(r'_(\d{4})-(\d{2})-(\d{2})_(\d{2})(\d{2})(\d{2})', img.name)
+    if m:
+        return datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)),
+                       int(m.group(4)), int(m.group(5)), int(m.group(6)))
+    # Format : 14h57m03s
+    m = re.search(r'(\d{2})h(\d{2})m(\d{2})s', img.name)
+    if m:
+        return datetime(2026, 9, 30, int(m.group(1)), int(m.group(2)), int(m.group(3)))
+    # Fallback : mtime
+    return datetime.fromtimestamp(img.stat().st_mtime)
 
-# Liste des insertions
-INSERTIONS = [
-    ("**Résultat :** environnement préparé, sauvegarde créée, arborescence propre.",
-     "01-docker-ps.png", "État des conteneurs Docker au démarrage de la journée."),
-    ("**Résultat :** environnement préparé, sauvegarde créée, arborescence propre.",
-     "02-arborescence-initiale.png", "Arborescence initiale du projet."),
-    ("**Résultat :** environnement préparé, sauvegarde créée, arborescence propre.",
-     "03-sauvegarde.png", "Création de la sauvegarde horodatée."),
-    ("**Résultat :** 13 fichiers SQL (6 CP + 7 Tenant) + 1 vérificateur.",
-     "05-recap-migrations.png", "Compteurs par migration."),
-    ("**Décision (ADR-011) :** passage à `db_user = 'postgres'`",
-     "24-partition-table.png", "Structure de la table partition_maintenance_log."),
-    ("**Durée effective :** 30 minutes.",
-     "49-commit-bl004.png", "Commit BL-004 : Flyway + ADRs 008/009/010."),
-    ("**Durée effective :** 30 minutes.",
-     "51-etat-final-git.png", "État final Git."),
-    ("| PostgreSQL préservation | 3 bases intactes ✅ |",
-     "52-test3-cp.png", "Test 3 CP : 0 table manquante."),
-    ("| PostgreSQL préservation | 3 bases intactes ✅ |",
-     "53-test4-cp.png", "Test 4 CP : 11 colonnes critiques."),
-    ("| PostgreSQL préservation | 3 bases intactes ✅ |",
-     "54-test5-cp.png", "Test 5 CP : 6 triggers d'immuabilité."),
-    ("| PostgreSQL préservation | 3 bases intactes ✅ |",
-     "55-test6-cp.png", "Test 6 CP : 6 fonctions critiques."),
-    ("| PostgreSQL préservation | 3 bases intactes ✅ |",
-     "60-test10-tenant.png", "Test 10 Tenant : verrouillage automatique."),
-    ("| PostgreSQL préservation | 3 bases intactes ✅ |",
-     "61-test12-tenant.png", "Test 12 Tenant : password_history append-only."),
-]
+# Charger toutes les captures avec leur datetime
+captures = []
+for img in SRC.glob("*.png"):
+    captures.append((extraire_datetime(img), img))
+captures.sort(key=lambda x: x[0])
 
-compteur = 0
-for marqueur, image, legende in INSERTIONS:
-    if image in contenu:
-        continue
-    if marqueur not in contenu:
-        continue
-    if not (CAPTURES / image).exists():
-        continue
+print(f"  → {len(captures)} captures analysées")
+
+# Mapping : figure → fenêtre horaire
+# Basé sur le déroulement de la journée
+MAPPING_HORAIRE = {
+    # Briefing et sauvegarde (08h30 - 09h30)
+    "02-arborescence-initiale.png": (8, 30, 9, 30),
+    "03-sauvegarde.png":            (8, 30, 9, 30),
+    # Reconstruction 13 migrations (09h30 - 10h30)
+    "04-13-migrations.png":         (9, 30, 10, 30),
+    # Flyway (11h30 - 12h30)
+    "08-tab-detection.png":         (11, 30, 12, 30),
+    "09-flyway-pom.png":            (11, 30, 12, 30),
+    "10-validation-compilation.png":(11, 30, 12, 30),
+    "11-application-yml.png":       (11, 30, 12, 30),
+    "16-boot4-starters.png":        (11, 30, 12, 30),
+    "19-flyway-history.png":        (11, 30, 12, 30),
+    "20-nb-tables-seeds.png":       (11, 30, 12, 30),
+    "21-etat-apres-seed.png":       (11, 30, 12, 30),
+    "22-flyway-history-7.png":      (12, 30, 13, 30),
+    # BL-005 Partitions (12h30 - 13h30)
+    "23-v7-created.png":            (12, 30, 13, 30),
+    "24-partition-table.png":       (12, 30, 13, 30),
+    "25-compilation-demarrage.png": (12, 30, 13, 30),
+    "26-endpoint-0.png":            (13, 30, 14, 0),
+    "27-errors-password.png":       (13, 30, 14, 0),
+    "28-alter-role.png":            (13, 30, 14, 0),
+    "29-tenant-databases.png":      (13, 30, 14, 0),
+    "30-endpoint-success.png":      (13, 30, 14, 0),
+    "31-partitions-demo001.png":    (13, 30, 14, 0),
+    "32-partitions-demo002.png":    (13, 30, 14, 0),
+    "33-journal-cp.png":            (13, 30, 14, 0),
+    "34-5-dernieres.png":           (13, 30, 14, 0),
+    # BL-006 Docker (14h00 - 15h00)
+    "01-pgsty-pull.png":            (14, 0, 15, 0),
+    "35-volumes.png":               (14, 0, 14, 30),
+    "36-ports.png":                 (14, 0, 14, 30),
+    "37-dumps.png":                 (14, 0, 14, 30),
+    "38-validation-yaml.png":       (14, 0, 14, 30),
+    "39-images-modif.png":          (14, 0, 14, 30),
+    "40-test-pull.png":             (14, 0, 15, 0),
+    "41-docker-up.png":             (14, 30, 15, 0),
+    "42-healthcheck.png":           (14, 30, 15, 0),
+    "43-vault-healthy.png":         (14, 30, 15, 0),
+    "44-verif-pg.png":              (14, 30, 15, 0),
+    "45-tests-services.png":        (14, 30, 15, 0),
+    "46-init-vault-ok.png":         (14, 30, 15, 0),
+    "47-init-minio-ok.png":         (14, 30, 15, 0),
+    "48-recap-bl006.png":           (14, 30, 15, 0),
+    # Git / Tests (15h00 - 16h00)
+    "49-commit-bl004.png":          (15, 0, 16, 0),
+    "50-commit-chore.png":          (15, 0, 16, 0),
+    "51-etat-final-git.png":        (15, 0, 16, 0),
+    "62-isolation-proof.png":       (15, 0, 16, 0),
+    "63-generation-dumps.png":      (15, 0, 16, 0),
+    # Tests CP/Tenant (dans le désordre horaire — chercher par contenu)
+    # On les assignera plus tard
+}
+
+# Assigner les captures avec fenêtre horaire
+resultats = {}
+deja_utilisees = set()
+
+for cible, (h_debut, m_debut, h_fin, m_fin) in MAPPING_HORAIRE.items():
+    debut = datetime(2026, 9, 30, h_debut, m_debut)
+    fin = datetime(2026, 9, 30, h_fin, m_fin)
     
-    chemin = f"{CAPTURES}/{image}"
-    bloc = f"\n\n![{legende}]({chemin})\n\n*{legende}*\n"
-    contenu = contenu.replace(marqueur, marqueur + bloc, 1)
+    candidates = [(dt, img) for dt, img in captures 
+                  if debut <= dt <= fin and img.name not in deja_utilisees]
+    
+    if candidates:
+        # Prendre la première ou du milieu
+        dt, img = candidates[len(candidates)//2]
+        resultats[cible] = img
+        deja_utilisees.add(img.name)
+
+# Afficher le mapping
+print(f"  → {len(resultats)} captures assignées automatiquement")
+print()
+
+# Copier avec les bons noms
+compteur = 0
+for cible, source in resultats.items():
+    dest = DEST / cible
+    shutil.copy2(source, dest)
     compteur += 1
 
-RAPPORT.write_text(contenu, encoding="utf-8")
+print(f"  ✅ {compteur} captures copiées dans docs/rapports/captures/10/")
 
-refs = re.findall(r'\]\(([^)]+\.png)\)', contenu)
-print(f"  → {compteur} nouvelles figures insérées")
-print(f"  → {len(set(refs))} figures au total dans le rapport")
+# Créer un fichier de suivi
+tracking = RACINE / "docs/rapports/captures/10-mapping.txt"
+with open(tracking, "w", encoding="utf-8") as f:
+    f.write("# Mapping captures → figures du rapport\n\n")
+    for cible, source in sorted(resultats.items()):
+        f.write(f"{cible}  ←  {source.name}\n")
+    f.write(f"\nTotal : {len(resultats)} captures assignées\n")
+    f.write(f"Non assignées : {len(captures) - len(resultats)}\n")
+
+print(f"  📝 Suivi : {tracking}")
 PYEOF
 
-# =====================================================================
-#  ÉTAPE 4 — Page de garde avec logo
-# =====================================================================
+# ---- Étape 5 — Vérification du logo -------------------------------
 echo ""
-echo "[4/7] Vérification de la page de garde..."
+echo "[5/7] Vérification du logo..."
 
-# Créer le logo si absent
-if [ ! -f "$LOGO" ]; then
-    echo -e "  ${JAUNE}⚠${NC} Logo absent — création d'un logo temporaire"
-    convert -size 1000x400 xc:"#1e1e1e" \
-        -fill "#4fc3f7" -pointsize 90 -gravity center -annotate +0-30 "yCogniCore" \
-        -fill "#0277bd" -pointsize 45 -gravity center -annotate +0+40 "Cloud" \
-        "$LOGO" 2>/dev/null && echo -e "  ${VERT}✅${NC} Logo temporaire créé"
-fi
-
-# Vérifier si la page de garde existe déjà
-if grep -q "yCogniCore Cloud.*Plateforme ERP SaaS" "$RAPPORT" 2>/dev/null; then
-    echo -e "  ${VERT}✅${NC} Page de garde déjà présente"
+if [ ! -f "$ASSETS/logo.png" ]; then
+    echo -e "  ${JAUNE}⚠${NC} Logo absent : $ASSETS/logo.png"
+    echo "     → Placez votre logo PNG à cet endroit pour la page de garde."
+    echo "     → Le document sera généré sans logo (l'espace sera vide)."
 else
-    python3 << 'PYEOF'
-from pathlib import Path
-
-RAPPORT = Path.home() / "projets" / "ycognicore-cloud" / "docs/rapports/journalier-10.md"
-LOGO = Path.home() / "projets" / "ycognicore-cloud" / "docs/rapports/assets/logo.png"
-
-contenu = RAPPORT.read_text(encoding="utf-8")
-
-page_garde = f"""
-<div align="center">
-
-![Logo yCogniCore Cloud]({LOGO})
-
-# **yCogniCore Cloud**
-
-### Plateforme ERP SaaS multi-tenant
-
----
-
-## Rapport Journalier n°10
-
-**Sprint H0 — Socle Invariable**
-
-**Auteur :** Yameogo Idrissa
-**Date :** 30 septembre 2026
-**Version :** 2.0
-
----
-
-*Document produit dans le cadre du stage à SOCIETE BENJEDDOU TECHNOLOGIE*
-
-</div>
-
-\\newpage
-
-"""
-
-contenu = page_garde + contenu
-RAPPORT.write_text(contenu, encoding="utf-8")
-print("  ✅ Page de garde ajoutée")
-PYEOF
+    echo -e "  ${VERT}✅${NC} Logo trouvé : $ASSETS/logo.png"
+    ls -lh "$ASSETS/logo.png"
 fi
 
-# =====================================================================
-#  ÉTAPE 5 — Conversion en Word
-# =====================================================================
+# ---- Étape 6 — Génération du Word ---------------------------------
 echo ""
-echo "[5/7] Conversion en Word (.docx)..."
+echo "[6/7] Génération du document Word..."
+
+DOCX="$SORTIE/Rapport_Journalier_n10_Yameogo_Idrissa.docx"
+REFERENCE="$SORTIE/reference.docx"
+
+# Créer un fichier de référence Word pour les styles
+pandoc --print-default-data-file reference.docx > "$REFERENCE" 2>/dev/null || true
+
+if [ ! -f "$RAPPORT_MD" ]; then
+    echo -e "  ${ROUGE}❌ Rapport Markdown absent${NC}"
+    echo "     → Créez d'abord : $RAPPORT_MD"
+    exit 1
+fi
 
 cd "$RACINE"
 
-DOCX="$EXPORT/Rapport_Journalier_n10_Yameogo_Idrissa.docx"
-
-pandoc "$RAPPORT" \
+# Conversion Markdown → Word
+pandoc "$RAPPORT_MD" \
     --from markdown \
     --to docx \
     --standalone \
     --toc \
     --toc-depth=3 \
     --number-sections \
+    --resource-path="$RACINE:$CAPTURES_FINAL:$ASSETS" \
     --output="$DOCX" \
-    2>&1 | head -5
+    --metadata title="Rapport Journalier n°10" \
+    --metadata subtitle="Sprint H0 — Socle Invariable" \
+    --metadata author="Yameogo Idrissa" \
+    --metadata date="30 septembre 2026" \
+    ${REFERENCE:+--reference-doc="$REFERENCE"} \
+    2>&1 | tail -5
 
 if [ -f "$DOCX" ]; then
-    NB_IMAGES=$(unzip -l "$DOCX" 2>/dev/null | grep -cE "media/rId.*\.png")
-    TAILLE=$(du -h "$DOCX" | cut -f1)
-    echo -e "  ${VERT}✅${NC} Word généré : $TAILLE, $NB_IMAGES images"
+    echo ""
+    echo -e "  ${VERT}✅ Rapport Word généré${NC}"
+    ls -lh "$DOCX"
 else
-    echo -e "  ${ROUGE}❌ Échec de génération du Word${NC}"
+    echo -e "  ${ROUGE}❌ Échec de la génération${NC}"
     exit 1
 fi
 
-# =====================================================================
-#  ÉTAPE 6 — Conversion en PDF
-# =====================================================================
+# ---- Étape 7 — Génération PDF (si LibreOffice dispo) --------------
 echo ""
-echo "[6/7] Conversion en PDF..."
+echo "[7/7] Génération du PDF (optionnel)..."
 
-PDF="$EXPORT/Rapport_Journalier_n10_Yameogo_Idrissa.pdf"
+PDF="$SORTIE/Rapport_Journalier_n10_Yameogo_Idrissa.pdf"
 
-if [ "$HAS_LIBREOFFICE" = "1" ]; then
+if command -v libreoffice &>/dev/null; then
     libreoffice --headless --convert-to pdf \
-        --outdir "$EXPORT" "$DOCX" 2>&1 | tail -1
-    
-    if [ -f "$PDF" ]; then
-        TAILLE=$(du -h "$PDF" | cut -f1)
-        echo -e "  ${VERT}✅${NC} PDF généré : $TAILLE"
-    fi
+        --outdir "$SORTIE" "$DOCX" &>/dev/null && \
+        echo -e "  ${VERT}✅ PDF généré : $PDF${NC}" || \
+        echo -e "  ${JAUNE}⚠ Conversion PDF échouée${NC}"
 else
-    echo -e "  ${JAUNE}⚠${NC} PDF ignoré (LibreOffice absent)"
+    echo -e "  ${JAUNE}⚠ LibreOffice non installé — PDF ignoré${NC}"
 fi
 
-# =====================================================================
-#  ÉTAPE 7 — Commit Git + Tag
-# =====================================================================
-echo ""
-echo "[7/7] Commit Git + Tag..."
-
-cd "$RACINE"
-
-git add docs/rapports/ tools/rapport/ tools/captures/ 2>/dev/null || true
-
-if git diff --cached --quiet; then
-    echo -e "  ${JAUNE}⚠${NC} Aucun changement à commiter"
-else
-    git commit -m "Rapport journalier n°10 — Version finale avec $NB_IMAGES figures
-
-- Rapport Word (.docx) : $NB_IMAGES images intégrées
-- Rapport PDF
-- 25 captures auto-générées
-- Page de garde avec logo yCogniCore Cloud
-
-Réf. : Sprint H0 clôturé (6/6)" 2>&1 | tail -3
-fi
-
-# Tag (seulement si n'existe pas)
-if ! git rev-parse v0.2.1-rapport-10 >/dev/null 2>&1; then
-    git tag -a v0.2.1-rapport-10 -m "Rapport n°10 final du 30/09/2026" 2>&1 | tail -2
-    echo -e "  ${VERT}✅${NC} Tag v0.2.1-rapport-10 créé"
-else
-    echo -e "  ${JAUNE}⚠${NC} Tag v0.2.1-rapport-10 déjà présent"
-fi
-
-# =====================================================================
-#  RÉCAPITULATIF FINAL
-# =====================================================================
+# ---- Récapitulatif -------------------------------------------------
 echo ""
 echo "═══════════════════════════════════════════════════════"
-echo "  ✅ RAPPORT FINAL GÉNÉRÉ"
+echo "  ✅ GÉNÉRATION TERMINÉE"
 echo "═══════════════════════════════════════════════════════"
 echo ""
-echo "  📄 Livrables :"
-echo ""
-[ -f "$DOCX" ] && echo "     ✅ Word  : $DOCX"
-[ -f "$PDF" ] && echo "     ✅ PDF   : $PDF"
-[ -f "$RAPPORT" ] && echo "     ✅ MD    : $RAPPORT"
+echo "  📄 Rapport Word : $DOCX"
+[ -f "$PDF" ] && echo "  📄 Rapport PDF  : $PDF"
 echo ""
 echo "  📊 Statistiques :"
-echo "     - Figures dans le rapport : $NB_IMAGES"
-echo "     - Taille du Word          : $(du -h "$DOCX" 2>/dev/null | cut -f1)"
-[ -f "$PDF" ] && echo "     - Taille du PDF           : $(du -h "$PDF" | cut -f1)"
+echo "     - Captures totales    : $NB_COPIES"
+echo "     - Captures assignées  : $(ls -1 $CAPTURES_FINAL/*.png 2>/dev/null | wc -l)"
+echo "     - Taille du Word      : $(du -h $DOCX | cut -f1)"
 echo ""
-echo "  🎯 Prochaine étape :"
-echo "     Ouvrir le Word pour vérification :"
-echo "     libreoffice \"$DOCX\" &"
+echo "  🎯 Prochaines étapes :"
+echo "     1. Ouvrir : libreoffice $DOCX &"
+echo "     2. Vérifier la page de garde et la TOC"
+echo "     3. Ajuster les captures mal assignées si besoin"
+echo "     4. Enregistrer la vidéo de démonstration"
 echo ""
-echo "═══════════════════════════════════════════════════════"
+echo "  📝 Fichier de suivi : docs/rapports/captures/10-mapping.txt"
+echo ""

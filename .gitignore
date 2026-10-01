@@ -110,3 +110,32 @@ infra/**/*.backup*
 ~$*.xlsx
 ~$*.pptx
 *.tmp
+
+# ============================================================
+# Rapports journaliers (exclus du versionnement)
+# ============================================================
+docs/rapports/journalier-*.md
+docs/rapports/Rapport Journalier *.docx
+docs/rapports/Rapport Journalier *.pdf
+
+# ============================================================
+# Captures temporaires (NE PAS versionner)
+# ============================================================
+docs/rapports/captures/10-travail/
+docs/rapports/captures/10-candidates/
+docs/rapports/captures/10-selection/
+docs/rapports/captures/10-mapping.txt
+
+# Motifs génériques
+docs/rapports/captures/*-travail/
+docs/rapports/captures/*-candidates/
+docs/rapports/captures/*-selection/
+
+# Backups locaux des rapports
+docs/rapports/*.backup
+docs/rapports/*.backup-*
+docs/rapports/*.md.backup*
+
+# Fichiers de verrou LibreOffice
+.~lock.*
+~$*.docx

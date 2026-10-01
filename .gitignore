@@ -100,3 +100,13 @@ pom.xml.backup*
 # Backups infra
 infra/*.backup*
 infra/**/*.backup*
+
+# ============================================================
+# Fichiers temporaires LibreOffice
+# ============================================================
+.~lock.*
+~$*.docx
+~$*.doc
+~$*.xlsx
+~$*.pptx
+*.tmp

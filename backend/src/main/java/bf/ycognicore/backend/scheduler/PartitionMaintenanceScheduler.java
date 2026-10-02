@@ -6,13 +6,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-/**
- * Scheduler de maintenance des partitions.
- *
- * Exécution : 1er de chaque mois à 02h00.
- *
- * Réf. : BL-005, NFR-OPS-04
- */
 @Component
 public class PartitionMaintenanceScheduler {
 
@@ -29,10 +22,10 @@ public class PartitionMaintenanceScheduler {
         logger.info("=== [SCHEDULER] Maintenance mensuelle ===");
         try {
             var result = service.runMaintenance("SCHEDULER");
-            logger.info("=== [SCHEDULER] Résultat : {} tenants, {} partitions, {} erreurs ===",
-                result.nbTenants(), result.nbPartitionsCreees(), result.nbErreurs());
+            logger.info("=== [SCHEDULER] Resultat : {} tenants, {} partitions, {} erreurs ===",
+                    result.nbTenants(), result.nbPartitionsCrees(), result.nbErreurs());
         } catch (Exception e) {
-            logger.error("=== [SCHEDULER] Échec ===", e);
+            logger.error("=== [SCHEDULER] Echec ===", e);
         }
     }
 }

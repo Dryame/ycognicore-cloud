@@ -21,7 +21,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(rbacInterceptor)
-                .addPathPatterns("/api/**")
+                .addPathPatterns("/api/rbac-test/**")
                 .excludePathPatterns(
                         "/api/auth/**",
                         "/api/_poc/**",

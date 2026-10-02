@@ -14,39 +14,34 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Auth Dispatcher : point d'entree unique qui identifie le type
- * d'utilisateur et le redirige vers l'interface appropriee.
- *
- * Ref. : NFR-SEC-06, BL-011
- */
 @Service
 public class AuthDispatcherService {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthDispatcherService.class);
 
     private final SuperadminUserRepository superadminRepo;
-    private final UserRepository userRepo;   // tenant
+    private final UserRepository userRepo;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final UserRoleLoader userRoleLoader;
 
     public AuthDispatcherService(
             SuperadminUserRepository superadminRepo,
             UserRepository userRepo,
             PasswordEncoder passwordEncoder,
-            JwtService jwtService
+            JwtService jwtService,
+            UserRoleLoader userRoleLoader
     ) {
         this.superadminRepo = superadminRepo;
         this.userRepo = userRepo;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.userRoleLoader = userRoleLoader;
     }
 
-    /**
-     * Authentifie selon le tenantCode (null = Superadmin).
-     */
     public LoginResponse authenticate(LoginRequest req) {
         if (req.tenantCode() == null || req.tenantCode().isBlank()) {
             return authenticateSuperadmin(req);
@@ -54,9 +49,6 @@ public class AuthDispatcherService {
         return authenticateTenantUser(req);
     }
 
-    // -----------------------------------------------------------------
-    // Superadmin (control plane)
-    // -----------------------------------------------------------------
     private LoginResponse authenticateSuperadmin(LoginRequest req) {
         logger.debug("Auth SUPERADMIN email={}", req.email());
 
@@ -83,9 +75,6 @@ public class AuthDispatcherService {
                 jwtService.getAccessTtlSeconds(), info);
     }
 
-    // -----------------------------------------------------------------
-    // Utilisateur tenant (interne ou externe)
-    // -----------------------------------------------------------------
     private LoginResponse authenticateTenantUser(LoginRequest req) {
         String tenantCode = req.tenantCode().trim().toUpperCase();
         logger.debug("Auth TENANT={} email={}", tenantCode, req.email());
@@ -102,20 +91,39 @@ public class AuthDispatcherService {
                 throw new BadCredentialsException("Compte non actif (" + user.getStatut() + ")");
             }
 
-            // TODO BL-013 : distinguer ADMIN / EMPLOYE via role "Administrateur Client"
-            String userType = "EXTERNE".equals(user.getTypeUtilisateur()) ? "EXTERNE" : "INTERNE";
-            String redirectUrl = "EXTERNE".equals(userType)
-                    ? "/portal/dashboard"
-                    : "/admin/dashboard";
+            // Charger les roles du user pour distinguer ADMIN / INTERNE / EXTERNE
+            List<String> roles = userRoleLoader.loadRoles(user.getId());
+            String userType;
+            String redirectUrl;
+
+            if ("EXTERNE".equals(user.getTypeUtilisateur())) {
+                userType = "EXTERNE";
+                redirectUrl = "/portal/dashboard";
+            } else if (userRoleLoader.isAdminClient(roles)) {
+                userType = "ADMIN";
+                redirectUrl = "/admin/dashboard";
+            } else {
+                userType = "INTERNE";
+                redirectUrl = "/employee/dashboard";
+            }
+
+            // Construire la liste de roles pour le JWT
+            List<String> jwtRoles = new ArrayList<>();
+            jwtRoles.add("ROLE_" + userType);
+            for (String role : roles) {
+                jwtRoles.add("ROLE_" + role.toUpperCase().replace(" ", "_"));
+            }
 
             String accessToken = jwtService.generateAccessToken(
-                    user.getId().toString(), user.getEmail(), userType, tenantCode,
-                    List.of("ROLE_" + userType));
+                    user.getId().toString(), user.getEmail(), userType, tenantCode, jwtRoles);
             String refreshToken = jwtService.generateRefreshToken(user.getId().toString());
 
             UserInfo info = new UserInfo(
                     user.getId().toString(), user.getEmail(), userType, tenantCode,
                     redirectUrl);
+
+            logger.info("Login OK user={} type={} tenant={} roles={}",
+                    user.getEmail(), userType, tenantCode, jwtRoles);
 
             return new LoginResponse(accessToken, refreshToken, "Bearer",
                     jwtService.getAccessTtlSeconds(), info);

@@ -1,6 +1,12 @@
 package bf.ycognicore.backend.entity.controlplane;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -39,8 +45,9 @@ public class SystemMonitoring {
     @Column(name = "seuil_alerte", precision = 20, scale = 6)
     private BigDecimal seuilAlerte;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "metadata", columnDefinition = "jsonb")
-    private String metadata;
+    private JsonNode metadata;
 
     public SystemMonitoring() {}
 
@@ -60,6 +67,6 @@ public class SystemMonitoring {
     public void setNiveau(String v) { this.niveau = v; }
     public BigDecimal getSeuilAlerte() { return seuilAlerte; }
     public void setSeuilAlerte(BigDecimal v) { this.seuilAlerte = v; }
-    public String getMetadata() { return metadata; }
-    public void setMetadata(String v) { this.metadata = v; }
+    public JsonNode getMetadata() { return metadata; }
+    public void setMetadata(JsonNode v) { this.metadata = v; }
 }

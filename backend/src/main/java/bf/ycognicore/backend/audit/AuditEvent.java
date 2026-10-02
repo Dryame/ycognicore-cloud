@@ -1,12 +1,10 @@
 package bf.ycognicore.backend.audit;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-/**
- * Evenement d'audit.
- * Ref. : NFR-SEC-16, BL-014
- */
 public record AuditEvent(
         UUID userId,
         String tenantCode,
@@ -17,6 +15,6 @@ public record AuditEvent(
         boolean succes,
         String ip,
         String userAgent,
-        String details,
+        JsonNode details,
         OffsetDateTime timestamp
 ) {}

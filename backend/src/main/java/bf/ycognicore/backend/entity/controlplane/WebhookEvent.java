@@ -1,6 +1,12 @@
 package bf.ycognicore.backend.entity.controlplane;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -26,8 +32,9 @@ public class WebhookEvent {
     @Column(name = "signature", length = 500)
     private String signature;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "payload_brut", nullable = false, columnDefinition = "jsonb")
-    private String payloadBrut;
+    private JsonNode payloadBrut;
 
     @Column(name = "statut_traitement", nullable = false, length = 30)
     private String statutTraitement = "RECU";
@@ -51,8 +58,8 @@ public class WebhookEvent {
     public void setEventIdExterne(String v) { this.eventIdExterne = v; }
     public String getSignature() { return signature; }
     public void setSignature(String v) { this.signature = v; }
-    public String getPayloadBrut() { return payloadBrut; }
-    public void setPayloadBrut(String v) { this.payloadBrut = v; }
+    public JsonNode getPayloadBrut() { return payloadBrut; }
+    public void setPayloadBrut(JsonNode v) { this.payloadBrut = v; }
     public String getStatutTraitement() { return statutTraitement; }
     public void setStatutTraitement(String v) { this.statutTraitement = v; }
     public OffsetDateTime getDateReception() { return dateReception; }

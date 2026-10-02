@@ -1,6 +1,12 @@
 package bf.ycognicore.backend.entity.tenant;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -41,8 +47,9 @@ public class User {
     @Column(name = "mfa_enabled", nullable = false)
     private boolean mfaEnabled = false;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "mfa_secret_package", columnDefinition = "jsonb")
-    private String mfaSecretPackage;
+    private JsonNode mfaSecretPackage;
 
     @Column(name = "mot_de_passe_a_changer", nullable = false)
     private boolean motDePasseAChanger = true;
@@ -91,8 +98,8 @@ public class User {
     public void setStatut(String v) { this.statut = v; }
     public boolean isMfaEnabled() { return mfaEnabled; }
     public void setMfaEnabled(boolean v) { this.mfaEnabled = v; }
-    public String getMfaSecretPackage() { return mfaSecretPackage; }
-    public void setMfaSecretPackage(String v) { this.mfaSecretPackage = v; }
+    public JsonNode getMfaSecretPackage() { return mfaSecretPackage; }
+    public void setMfaSecretPackage(JsonNode v) { this.mfaSecretPackage = v; }
     public boolean isMotDePasseAChanger() { return motDePasseAChanger; }
     public void setMotDePasseAChanger(boolean v) { this.motDePasseAChanger = v; }
     public OffsetDateTime getDateDerniereConnexion() { return dateDerniereConnexion; }

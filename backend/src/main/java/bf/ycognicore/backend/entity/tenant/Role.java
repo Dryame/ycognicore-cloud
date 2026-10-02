@@ -1,6 +1,12 @@
 package bf.ycognicore.backend.entity.tenant;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -25,8 +31,9 @@ public class Role {
     @Column(name = "est_systeme", nullable = false)
     private boolean estSysteme = false;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "scope", columnDefinition = "jsonb")
-    private String scope;
+    private JsonNode scope;
 
     @Column(name = "statut", nullable = false, length = 20)
     private String statut = "ACTIF";
@@ -47,8 +54,8 @@ public class Role {
     public void setDescription(String v) { this.description = v; }
     public boolean isEstSysteme() { return estSysteme; }
     public void setEstSysteme(boolean v) { this.estSysteme = v; }
-    public String getScope() { return scope; }
-    public void setScope(String v) { this.scope = v; }
+    public JsonNode getScope() { return scope; }
+    public void setScope(JsonNode v) { this.scope = v; }
     public String getStatut() { return statut; }
     public void setStatut(String v) { this.statut = v; }
     public UUID getCreatedBy() { return createdBy; }

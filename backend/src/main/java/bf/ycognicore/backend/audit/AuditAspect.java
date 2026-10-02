@@ -2,6 +2,8 @@ package bf.ycognicore.backend.audit;
 
 import bf.ycognicore.backend.multitenant.TenantContext;
 import bf.ycognicore.backend.service.AuditService;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.servlet.http.HttpServletRequest;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -18,10 +20,6 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-/**
- * Aspect AOP qui intercepte @Auditable et journalise dans audit_log.
- * Ref. : NFR-SEC-16, NFR-SEC-19, BL-014
- */
 @Aspect
 @Component
 public class AuditAspect {
@@ -29,9 +27,11 @@ public class AuditAspect {
     private static final Logger logger = LoggerFactory.getLogger(AuditAspect.class);
 
     private final AuditService auditService;
+    private final ObjectMapper objectMapper;
 
-    public AuditAspect(AuditService auditService) {
+    public AuditAspect(AuditService auditService, ObjectMapper objectMapper) {
         this.auditService = auditService;
+        this.objectMapper = objectMapper;
     }
 
     @Around("@annotation(auditable)")
@@ -77,12 +77,12 @@ public class AuditAspect {
             }
         }
 
-        String details = String.format(
-                "{\"method\":\"%s\",\"dureeMs\":%d%s}",
-                ((MethodSignature) pjp.getSignature()).getMethod().getName(),
-                dureeMs,
-                erreur != null ? ",\"erreur\":\"" + erreur.replace("\"", "'") + "\"" : ""
-        );
+        ObjectNode details = objectMapper.createObjectNode();
+        details.put("method", ((MethodSignature) pjp.getSignature()).getMethod().getName());
+        details.put("dureeMs", dureeMs);
+        if (erreur != null) {
+            details.put("erreur", erreur);
+        }
 
         return new AuditEvent(
                 userId,

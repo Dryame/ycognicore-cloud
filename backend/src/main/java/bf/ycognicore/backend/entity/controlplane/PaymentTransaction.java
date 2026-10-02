@@ -1,6 +1,12 @@
 package bf.ycognicore.backend.entity.controlplane;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -51,8 +57,9 @@ public class PaymentTransaction {
     @Column(name = "date_confirmation")
     private OffsetDateTime dateConfirmation;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "payload_retour", columnDefinition = "jsonb")
-    private String payloadRetour;
+    private JsonNode payloadRetour;
 
     public PaymentTransaction() {}
 
@@ -80,6 +87,6 @@ public class PaymentTransaction {
     public void setDateInitiation(OffsetDateTime v) { this.dateInitiation = v; }
     public OffsetDateTime getDateConfirmation() { return dateConfirmation; }
     public void setDateConfirmation(OffsetDateTime v) { this.dateConfirmation = v; }
-    public String getPayloadRetour() { return payloadRetour; }
-    public void setPayloadRetour(String v) { this.payloadRetour = v; }
+    public JsonNode getPayloadRetour() { return payloadRetour; }
+    public void setPayloadRetour(JsonNode v) { this.payloadRetour = v; }
 }

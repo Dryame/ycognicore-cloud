@@ -1,6 +1,12 @@
 package bf.ycognicore.backend.entity.controlplane;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -27,8 +33,9 @@ public class SuperadminUser {
     @Column(name = "mot_de_passe_hash", nullable = false, columnDefinition = "TEXT")
     private String motDePasseHash;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "mfa_secret_package", columnDefinition = "jsonb")
-    private String mfaSecretPackage;
+    private JsonNode mfaSecretPackage;
 
     @Column(name = "mfa_enabled", nullable = false)
     private boolean mfaEnabled = false;
@@ -58,8 +65,8 @@ public class SuperadminUser {
     public void setNomComplet(String v) { this.nomComplet = v; }
     public String getMotDePasseHash() { return motDePasseHash; }
     public void setMotDePasseHash(String v) { this.motDePasseHash = v; }
-    public String getMfaSecretPackage() { return mfaSecretPackage; }
-    public void setMfaSecretPackage(String v) { this.mfaSecretPackage = v; }
+    public JsonNode getMfaSecretPackage() { return mfaSecretPackage; }
+    public void setMfaSecretPackage(JsonNode v) { this.mfaSecretPackage = v; }
     public boolean isMfaEnabled() { return mfaEnabled; }
     public void setMfaEnabled(boolean v) { this.mfaEnabled = v; }
     public String getStatut() { return statut; }

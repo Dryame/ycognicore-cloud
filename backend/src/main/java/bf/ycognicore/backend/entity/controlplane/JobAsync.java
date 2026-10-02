@@ -1,6 +1,12 @@
 package bf.ycognicore.backend.entity.controlplane;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -23,8 +29,9 @@ public class JobAsync {
     @Column(name = "tenant_id")
     private UUID tenantId;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "payload", nullable = false, columnDefinition = "jsonb")
-    private String payload;
+    private JsonNode payload;
 
     @Column(name = "statut", nullable = false, length = 20)
     private String statut = "EN_ATTENTE";
@@ -61,8 +68,8 @@ public class JobAsync {
     public void setTypeJob(String v) { this.typeJob = v; }
     public UUID getTenantId() { return tenantId; }
     public void setTenantId(UUID v) { this.tenantId = v; }
-    public String getPayload() { return payload; }
-    public void setPayload(String v) { this.payload = v; }
+    public JsonNode getPayload() { return payload; }
+    public void setPayload(JsonNode v) { this.payload = v; }
     public String getStatut() { return statut; }
     public void setStatut(String v) { this.statut = v; }
     public Short getPriorite() { return priorite; }

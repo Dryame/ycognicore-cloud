@@ -1,6 +1,12 @@
 package bf.ycognicore.backend.entity.controlplane;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -50,8 +56,9 @@ public class NotificationQueue {
     @Column(name = "erreur", columnDefinition = "TEXT")
     private String erreur;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "metadata", columnDefinition = "jsonb")
-    private String metadata;
+    private JsonNode metadata;
 
     public NotificationQueue() {}
 
@@ -79,6 +86,6 @@ public class NotificationQueue {
     public void setDateEnvoi(OffsetDateTime v) { this.dateEnvoi = v; }
     public String getErreur() { return erreur; }
     public void setErreur(String v) { this.erreur = v; }
-    public String getMetadata() { return metadata; }
-    public void setMetadata(String v) { this.metadata = v; }
+    public JsonNode getMetadata() { return metadata; }
+    public void setMetadata(JsonNode v) { this.metadata = v; }
 }

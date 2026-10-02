@@ -1,7 +1,13 @@
 package bf.ycognicore.backend.entity.tenant;
 
 import bf.ycognicore.backend.entity.tenant.ids.AuditLogId;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -53,14 +59,17 @@ public class AuditLog {
     @Column(name = "succes", nullable = false)
     private boolean succes = true;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "avant", columnDefinition = "jsonb")
-    private String avant;
+    private JsonNode avant;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "apres", columnDefinition = "jsonb")
-    private String apres;
+    private JsonNode apres;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "details", columnDefinition = "jsonb")
-    private String details;
+    private JsonNode details;
 
     public AuditLog() {}
 
@@ -88,10 +97,10 @@ public class AuditLog {
     public void setNiveau(String v) { this.niveau = v; }
     public boolean isSucces() { return succes; }
     public void setSucces(boolean v) { this.succes = v; }
-    public String getAvant() { return avant; }
-    public void setAvant(String v) { this.avant = v; }
-    public String getApres() { return apres; }
-    public void setApres(String v) { this.apres = v; }
-    public String getDetails() { return details; }
-    public void setDetails(String v) { this.details = v; }
+    public JsonNode getAvant() { return avant; }
+    public void setAvant(JsonNode v) { this.avant = v; }
+    public JsonNode getApres() { return apres; }
+    public void setApres(JsonNode v) { this.apres = v; }
+    public JsonNode getDetails() { return details; }
+    public void setDetails(JsonNode v) { this.details = v; }
 }

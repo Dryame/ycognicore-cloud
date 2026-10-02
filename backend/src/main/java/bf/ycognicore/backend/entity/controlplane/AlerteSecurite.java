@@ -1,6 +1,12 @@
 package bf.ycognicore.backend.entity.controlplane;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -47,8 +53,9 @@ public class AlerteSecurite {
     @Column(name = "date_resolution")
     private OffsetDateTime dateResolution;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "details", columnDefinition = "jsonb")
-    private String details;
+    private JsonNode details;
 
     public AlerteSecurite() {}
 
@@ -74,6 +81,6 @@ public class AlerteSecurite {
     public void setDateCreation(OffsetDateTime v) { this.dateCreation = v; }
     public OffsetDateTime getDateResolution() { return dateResolution; }
     public void setDateResolution(OffsetDateTime v) { this.dateResolution = v; }
-    public String getDetails() { return details; }
-    public void setDetails(String v) { this.details = v; }
+    public JsonNode getDetails() { return details; }
+    public void setDetails(JsonNode v) { this.details = v; }
 }

@@ -69,7 +69,7 @@ public class AuthDispatcherService {
 
         UserInfo info = new UserInfo(
                 sa.getId().toString(), sa.getEmail(), "SUPERADMIN", null,
-                "/superadmin/dashboard");
+                "/superadmin");
 
         return new LoginResponse(accessToken, refreshToken, "Bearer",
                 jwtService.getAccessTtlSeconds(), info);
@@ -98,13 +98,13 @@ public class AuthDispatcherService {
 
             if ("EXTERNE".equals(user.getTypeUtilisateur())) {
                 userType = "EXTERNE";
-                redirectUrl = "/portal/dashboard";
+                redirectUrl = "/portal";
             } else if (userRoleLoader.isAdminClient(roles)) {
                 userType = "ADMIN";
-                redirectUrl = "/admin/dashboard";
+                redirectUrl = "/admin";
             } else {
                 userType = "INTERNE";
-                redirectUrl = "/employee/dashboard";
+                redirectUrl = "/employee";
             }
 
             // Construire la liste de roles pour le JWT

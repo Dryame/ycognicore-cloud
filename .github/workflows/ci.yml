@@ -1,0 +1,104 @@
+name: CI - yCogniCore Cloud
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+jobs:
+  backend:
+    name: Backend (Java 21 + Maven)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Build backend
+        working-directory: backend
+        run: ./mvnw clean package -DskipTests
+
+      - name: Run backend tests
+        working-directory: backend
+        run: ./mvnw test
+        continue-on-error: true
+
+      - name: Upload backend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-jar
+          path: backend/target/*.jar
+          retention-days: 7
+
+  frontend:
+    name: Frontend (Node 22 + Angular 22)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend (production)
+        working-directory: frontend
+        run: npx ng build --configuration production
+
+      - name: Upload frontend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist/frontend/
+          retention-days: 7
+
+  quality:
+    name: Qualite (structure projet)
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify project structure
+        run: |
+          echo "=== Verification de la structure ==="
+          test -f backend/pom.xml && echo "OK backend/pom.xml"
+          test -f frontend/package.json && echo "OK frontend/package.json"
+          test -f docs/BACKLOG.md && echo "OK docs/BACKLOG.md"
+          test -f docs/adr/ADR-006.md && echo "OK docs/adr/ADR-006.md"
+          echo "=== Structure validee ==="
+
+  summary:
+    name: Resume
+    runs-on: ubuntu-latest
+    needs: [backend, frontend, quality]
+    if: always()
+    steps:
+      - name: Statut global
+        run: |
+          echo "Backend   : ${{ needs.backend.result }}"
+          echo "Frontend  : ${{ needs.frontend.result }}"
+          echo "Qualite   : ${{ needs.quality.result }}"
+          if [ "${{ needs.backend.result }}" = "success" ] && [ "${{ needs.frontend.result }}" = "success" ] && [ "${{ needs.quality.result }}" = "success" ]; then
+            echo "Pipeline : VERT"
+            exit 0
+          else
+            echo "Pipeline : ECHEC"
+            exit 1
+          fi

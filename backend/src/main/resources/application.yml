@@ -1,6 +1,7 @@
 spring:
   application:
     name: backend
+
   datasource:
     url: jdbc:postgresql://localhost:5432/ycc_control_plane
     username: postgres
@@ -9,8 +10,10 @@ spring:
       pool-name: cp-pool
       maximum-pool-size: 5
       minimum-idle: 1
+
   jpa:
     open-in-view: false
+
   flyway:
     enabled: true
     baseline-on-migrate: true
@@ -27,11 +30,12 @@ ycc:
     token: ${VAULT_TOKEN:ycc-dev-token}
     transit-key: ycc-mfa-key
     issuer: "yCogniCore Cloud"
+
   jwt:
-    # SECRET DEMO - remplacer en prod via : openssl rand -base64 64
-    secret: "ZGVtby1zZWNyZXQtcmVwbGFjZS1tZS1pbi1wcm9kdWN0aW9uLXVzaW5nLW9wZW5zc2wtcmFuZC1iYXNlNjQtNjQtcGxlYXNlLXJlcGxhY2UtbWU="
+    secret: "ZGvtby1zWnyXZQtxmWvbGFjZ1s1tZSlpbilwcm9kdWN0aW9uLXVzZXItc2NvcGUtZ2x5Xnl1X21lc3NhZ2Utc2lnbmVkLWtleQ=="
     access-token-expiration-minutes: 30
     refresh-token-expiration-days: 7
+
   multitenant:
     tenant-pool:
       maximum-pool-size: 5
@@ -40,6 +44,7 @@ ycc:
       idle-timeout-ms: 300000
       max-lifetime-ms: 900000
     lookup-cache-ttl-seconds: 300
+
   partition:
     months-ahead: 3
     cron: "0 0 2 1 * *"
@@ -54,3 +59,31 @@ logging:
 
 server:
   port: 8080
+  address: 0.0.0.0
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+  health:
+    db:
+      enabled: false
+    diskspace:
+      enabled: true
+  metrics:
+    tags:
+      application: ycognicore-backend
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      slo:
+        http.server.requests: 100ms, 200ms, 500ms, 1s, 2s
+  prometheus:
+    metrics:
+      export:
+        enabled: true

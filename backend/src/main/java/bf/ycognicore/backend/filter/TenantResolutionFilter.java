@@ -2,6 +2,7 @@ package bf.ycognicore.backend.filter;
 
 import bf.ycognicore.backend.multitenant.TenantContext;
 import bf.ycognicore.backend.security.JwtAuthenticationFilter;
+import bf.ycognicore.backend.service.YccMetricsService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,14 +15,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
-/**
- * Filtre d'extraction du tenant courant.
- * Priorite 1 = APRES Spring Security (JWT).
- * - Si le JWT a pose un attribut jwt.tenantCode, on l'utilise.
- * - Sinon, fallback sur le header X-Tenant-Code (POC/tests).
- *
- * Ref. : ADR-006, NFR-SEC-11, BL-011
- */
 @Component
 @Order(1)
 public class TenantResolutionFilter extends OncePerRequestFilter {
@@ -30,6 +23,12 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
 
     public static final String HEADER_TENANT = "X-Tenant-Code";
 
+    private final YccMetricsService metrics;
+
+    public TenantResolutionFilter(YccMetricsService metrics) {
+        this.metrics = metrics;
+    }
+
     @Override
     protected void doFilterInternal(
             HttpServletRequest request,
@@ -37,11 +36,9 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
-        // 1. Priorite au JWT
         String tenantCode = (String) request.getAttribute(JwtAuthenticationFilter.ATTR_TENANT_CODE);
         String source = "JWT";
 
-        // 2. Fallback header (POC)
         if (tenantCode == null || tenantCode.isBlank()) {
             tenantCode = request.getHeader(HEADER_TENANT);
             source = "HEADER";
@@ -50,6 +47,7 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
         try {
             if (tenantCode != null && !tenantCode.isBlank()) {
                 TenantContext.setTenantId(tenantCode.trim().toUpperCase());
+                metrics.incrementTenantRouting();
                 logger.debug("Tenant resolu (source={}) pour {} {} : {}",
                         source, request.getMethod(), request.getRequestURI(), tenantCode);
             }

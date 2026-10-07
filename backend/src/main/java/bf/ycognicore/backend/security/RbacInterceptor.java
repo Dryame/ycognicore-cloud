@@ -2,6 +2,7 @@ package bf.ycognicore.backend.security;
 
 import bf.ycognicore.backend.multitenant.TenantContext;
 import bf.ycognicore.backend.service.RbacService;
+import bf.ycognicore.backend.service.YccMetricsService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -20,9 +21,11 @@ public class RbacInterceptor implements HandlerInterceptor {
     private static final Logger logger = LoggerFactory.getLogger(RbacInterceptor.class);
 
     private final RbacService rbacService;
+    private final YccMetricsService metrics;
 
-    public RbacInterceptor(RbacService rbacService) {
+    public RbacInterceptor(RbacService rbacService, YccMetricsService metrics) {
         this.rbacService = rbacService;
+        this.metrics = metrics;
     }
 
     @Override
@@ -60,6 +63,7 @@ public class RbacInterceptor implements HandlerInterceptor {
         boolean granted = rbacService.hasPermission(userId, req.module(), req.permission());
 
         if (!granted) {
+            metrics.incrementRbacDenied();
             logger.warn("RBAC REFUSE : user={} module={} perm={} tenant={}",
                     userId, req.module(), req.permission(), TenantContext.getTenantId());
             response.sendError(HttpServletResponse.SC_FORBIDDEN,

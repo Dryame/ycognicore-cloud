@@ -27,26 +27,38 @@ public class AuthDispatcherService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final UserRoleLoader userRoleLoader;
+    private final YccMetricsService metrics;
 
     public AuthDispatcherService(
             SuperadminUserRepository superadminRepo,
             UserRepository userRepo,
             PasswordEncoder passwordEncoder,
             JwtService jwtService,
-            UserRoleLoader userRoleLoader
+            UserRoleLoader userRoleLoader,
+            YccMetricsService metrics
     ) {
         this.superadminRepo = superadminRepo;
         this.userRepo = userRepo;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.userRoleLoader = userRoleLoader;
+        this.metrics = metrics;
     }
 
     public LoginResponse authenticate(LoginRequest req) {
-        if (req.tenantCode() == null || req.tenantCode().isBlank()) {
-            return authenticateSuperadmin(req);
+        try {
+            LoginResponse response;
+            if (req.tenantCode() == null || req.tenantCode().isBlank()) {
+                response = authenticateSuperadmin(req);
+            } else {
+                response = authenticateTenantUser(req);
+            }
+            metrics.incrementAuthLoginSuccess();
+            return response;
+        } catch (Exception e) {
+            metrics.incrementAuthLoginFailure();
+            throw e;
         }
-        return authenticateTenantUser(req);
     }
 
     private LoginResponse authenticateSuperadmin(LoginRequest req) {
@@ -91,7 +103,6 @@ public class AuthDispatcherService {
                 throw new BadCredentialsException("Compte non actif (" + user.getStatut() + ")");
             }
 
-            // Charger les roles du user pour distinguer ADMIN / INTERNE / EXTERNE
             List<String> roles = userRoleLoader.loadRoles(user.getId());
             String userType;
             String redirectUrl;
@@ -107,7 +118,6 @@ public class AuthDispatcherService {
                 redirectUrl = "/employee";
             }
 
-            // Construire la liste de roles pour le JWT
             List<String> jwtRoles = new ArrayList<>();
             jwtRoles.add("ROLE_" + userType);
             for (String role : roles) {

@@ -139,3 +139,9 @@ docs/rapports/*.md.backup*
 # Fichiers de verrou LibreOffice
 .~lock.*
 ~$*.docx
+
+# Backups de scripts
+*.bak-*
+*.bak
+*/_backup-*
+**/_a11y-backup-*/

@@ -1,16 +1,14 @@
 # =====================================================================
-# docker-compose.yml — Infrastructure yCogniCore Cloud
-# Réf. : BL-006
-# Services : PostgreSQL 16 + Redis 7 + Vault 1.15 + MinIO
+# Docker Compose — Infrastructure yCogniCore Cloud
+# 6 services : PostgreSQL 16, Redis 7, Vault 1.17.6, MinIO, Prometheus, Grafana
+# Ref. : ADR-012, ADR-013, Sprint H3.0 (instrumentation)
 # =====================================================================
-
-name: ycc-infra
 
 services:
   # -------------------------------------------------------------------
-  # PostgreSQL — Réutilise le volume pg_ycc_data existant
+  # PostgreSQL 16 — Control Plane + Bases tenant
   # -------------------------------------------------------------------
-  postgres:
+  pg:
     image: postgres:16
     container_name: pg-ycc
     restart: unless-stopped
@@ -51,7 +49,7 @@ services:
       retries: 5
 
   # -------------------------------------------------------------------
-  # HashiCorp Vault — Mode dev (⚠️ à sécuriser en production)
+  # Vault 1.17.6 — Coffre de secrets + transit (AES-256-GCM)
   # -------------------------------------------------------------------
   vault:
     image: hashicorp/vault:1.17.6
@@ -74,15 +72,15 @@ services:
       retries: 5
 
   # -------------------------------------------------------------------
-  # MinIO — Stockage objet (PDF, QR Code, KYC, documents)
+  # MinIO — Stockage objet (pgsty/minio — ADR-013)
   # -------------------------------------------------------------------
   minio:
     image: pgsty/minio:latest
     container_name: minio-ycc
     restart: unless-stopped
     ports:
-      - "9000:9000"   # API S3
-      - "9001:9001"   # Console web
+      - "9000:9000"
+      - "9001:9001"
     environment:
       MINIO_ROOT_USER: ycc-admin
       MINIO_ROOT_PASSWORD: ycc-admin-password
@@ -97,9 +95,57 @@ services:
       timeout: 5s
       retries: 5
 
-# ---------------------------------------------------------------------
-# Volumes — pg_ycc_data est EXTERNE (réutilise le volume existant)
-# ---------------------------------------------------------------------
+  # -------------------------------------------------------------------
+  # Prometheus — Base de métriques (Sprint H3.0)
+  # -------------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: prometheus-ycc
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - ycc-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # -------------------------------------------------------------------
+  # Grafana — Dashboards de visualisation (Sprint H3.0)
+  # -------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: grafana-ycc
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    networks:
+      - ycc-network
+    depends_on:
+      - prometheus
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://127.0.0.1:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# =====================================================================
+# Volumes
+# =====================================================================
 volumes:
   pg_ycc_data:
     external: true
@@ -108,10 +154,14 @@ volumes:
     name: ycc_redis_data
   minio_data:
     name: ycc_minio_data
+  prometheus_data:
+    name: ycc_prometheus_data
+  grafana_data:
+    name: ycc_grafana_data
 
-# ---------------------------------------------------------------------
-# Réseau interne
-# ---------------------------------------------------------------------
+# =====================================================================
+# Reseau interne
+# =====================================================================
 networks:
   ycc-network:
     name: ycc-network

@@ -1,0 +1,62 @@
+<a href="#main-content" class="skip-link">Aller au contenu principal</a>
+
+<div class="layout-wrapper">
+
+  <header class="app-header" role="banner">
+    <div class="header-left">
+      <button
+        type="button"
+        class="menu-toggle"
+        (click)="toggleSidebar()"
+        [attr.aria-expanded]="isSidebarOpen()"
+        aria-controls="sidebar-nav"
+        aria-label="Ouvrir ou fermer le menu de navigation">
+        <span aria-hidden="true">☰</span>
+      </button>
+      <span class="logo">yCogniCore</span>
+    </div>
+
+    <div class="header-right">
+      <span class="user-info">
+        <span class="user-email">{{ auth.currentUser?.email }}</span>
+        <span class="badge" [attr.aria-label]="'Profil : ' + auth.currentUser?.userType">
+          {{ auth.currentUser?.userType }}
+        </span>
+        @if (auth.currentUser?.tenantCode) {
+          <span class="tenant" aria-label="Tenant actif">
+            [{{ auth.currentUser?.tenantCode }}]
+          </span>
+        }
+      </span>
+      <button
+        type="button"
+        class="logout-btn"
+        (click)="auth.logout()"
+        aria-label="Se déconnecter de la session">
+        Déconnexion
+      </button>
+    </div>
+  </header>
+
+  <div class="layout-body">
+
+    <nav
+      id="sidebar-nav"
+      class="sidebar"
+      role="navigation"
+      aria-label="Navigation principale"
+      [class.open]="isSidebarOpen()">
+      <ul class="nav-list">
+        <li><a href="/dashboard" class="nav-link">Tableau de bord</a></li>
+        <li><a href="/tenants" class="nav-link">Gestion des Tenants</a></li>
+        <li><a href="/users" class="nav-link">Utilisateurs</a></li>
+        <li><a href="/settings" class="nav-link">Paramètres</a></li>
+      </ul>
+    </nav>
+
+    <main id="main-content" class="main-content" role="main" tabindex="-1">
+      <router-outlet></router-outlet>
+    </main>
+
+  </div>
+</div>

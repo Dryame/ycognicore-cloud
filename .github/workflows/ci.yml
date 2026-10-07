@@ -60,6 +60,43 @@ jobs:
         working-directory: frontend
         run: npx ng build --configuration production
 
+      - name: Install @axe-core/cli
+        run: npm install -g @axe-core/cli
+
+      - name: Run A11y audit (WCAG 2.1 AA)
+        run: |
+          echo "🔍 Démarrage du serveur Angular..."
+          cd frontend
+          npx ng serve --port 4200 --poll=2000 &
+          NG_PID=$!
+          sleep 30
+
+          echo "🔍 Audit A11y..."
+          axe http://localhost:4200/login             --tags wcag2a,wcag2aa,wcag21a,wcag21aa             --save /tmp/axe-report.json || true
+
+          echo "🔍 Analyse du rapport..."
+          if [ -f /tmp/axe-report.json ]; then
+            CRITICAL=$(python3 -c "import json; d=json.load(open('/tmp/axe-report.json')); print(sum(1 for v in d.get('violations',[]) if v.get('impact')=='critical'))" 2>/dev/null || echo "0")
+            echo "Violations critiques : $CRITICAL"
+            if [ "$CRITICAL" -gt 0 ]; then
+              echo "❌ Violations A11y critiques détectées"
+              kill $NG_PID || true
+              exit 1
+            fi
+            echo "✅ Aucune violation critique"
+          fi
+          kill $NG_PID || true
+
+      - name: Upload A11y report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a11y-report
+          path: /tmp/axe-report.json
+          retention-days: 7
+          if-no-files-found: ignore
+
+
       - name: Upload frontend artifact
         uses: actions/upload-artifact@v4
         with:

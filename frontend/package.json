@@ -6,7 +6,9 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "test:a11y": "axe http://localhost:4200/login --exit --tags wcag2a,wcag2aa,wcag21a,wcag21aa",
+    "test:a11y:report": "axe http://localhost:4200/login --save /tmp/axe-report.json --tags wcag2a,wcag2aa,wcag21a,wcag21aa"
   },
   "private": true,
   "packageManager": "npm@10.9.9",

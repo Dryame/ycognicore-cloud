@@ -1,0 +1,104 @@
+<main class="login-container" role="main" aria-labelledby="login-title">
+  <div class="login-card">
+
+    <h1 id="login-title" class="login-title">Connexion à yCogniCore</h1>
+
+    <form
+      [formGroup]="loginForm"
+      (ngSubmit)="onSubmit()"
+      novalidate
+      aria-describedby="form-instructions">
+
+      <p id="form-instructions" class="sr-only">
+        Remplissez tous les champs obligatoires. Le code tenant est optionnel pour les superadministrateurs.
+      </p>
+
+      <!-- Champ Email -->
+      <div class="form-group">
+        <label for="email">
+          Adresse email <span aria-hidden="true">*</span>
+          <span class="sr-only">(obligatoire)</span>
+        </label>
+        <input
+          type="email"
+          id="email"
+          formControlName="email"
+          autocomplete="email"
+          inputmode="email"
+          [attr.aria-invalid]="emailInvalid()"
+          [attr.aria-describedby]="emailInvalid() ? 'email-error' : null"
+          [attr.aria-required]="true"
+          required />
+        @if (emailInvalid()) {
+          <div id="email-error" class="error-message" role="alert" aria-live="polite">
+            <span aria-hidden="true">⚠️</span>
+            <span>Veuillez saisir une adresse email valide.</span>
+          </div>
+        }
+      </div>
+
+      <!-- Champ Mot de passe -->
+      <div class="form-group">
+        <label for="password">
+          Mot de passe <span aria-hidden="true">*</span>
+          <span class="sr-only">(obligatoire)</span>
+        </label>
+        <input
+          type="password"
+          id="password"
+          formControlName="password"
+          autocomplete="current-password"
+          [attr.aria-invalid]="passwordInvalid()"
+          [attr.aria-describedby]="passwordInvalid() ? 'password-error' : 'password-hint'"
+          [attr.aria-required]="true"
+          required />
+        <div id="password-hint" class="field-hint">Minimum 8 caractères.</div>
+        @if (passwordInvalid()) {
+          <div id="password-error" class="error-message" role="alert" aria-live="polite">
+            <span aria-hidden="true">⚠️</span>
+            <span>Le mot de passe est requis (minimum 8 caractères).</span>
+          </div>
+        }
+      </div>
+
+      <!-- Champ Code tenant -->
+      <div class="form-group">
+        <label for="tenantCode">
+          Code tenant <span class="field-optional">(optionnel)</span>
+        </label>
+        <input
+          type="text"
+          id="tenantCode"
+          formControlName="tenantCode"
+          autocomplete="organization"
+          aria-describedby="tenant-hint" />
+        <div id="tenant-hint" class="field-hint">
+          Laisser vide pour les superadministrateurs.
+        </div>
+      </div>
+
+      <!-- Erreur globale -->
+      @if (errorMessage()) {
+        <div class="global-error" role="alert" aria-live="assertive">
+          <span aria-hidden="true">❌</span>
+          <span>{{ errorMessage() }}</span>
+        </div>
+      }
+
+      <!-- Bouton de soumission -->
+      <button
+        type="submit"
+        class="btn-primary"
+        [disabled]="isLoading()"
+        [attr.aria-busy]="isLoading()">
+        @if (!isLoading()) {
+          <span>Se connecter</span>
+        } @else {
+          <span class="sr-only">Connexion en cours, veuillez patienter...</span>
+          <span aria-hidden="true">Connexion...</span>
+        }
+      </button>
+
+    </form>
+  </div>
+</main>

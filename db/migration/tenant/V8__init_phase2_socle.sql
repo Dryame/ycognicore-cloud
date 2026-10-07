@@ -108,7 +108,7 @@ BEGIN
     -- Met à jour updated_at si la colonne existe
     IF EXISTS (SELECT 1 FROM information_schema.columns
                WHERE table_name = TG_TABLE_NAME AND column_name = 'updated_at') THEN
-        NEW.updated_at := now();
+        NEW.updated_at := clock_timestamp();
     END IF;
 
     -- Met à jour updated_by si la colonne existe
@@ -171,7 +171,7 @@ BEGIN
                    WHERE table_name = p_table_name AND column_name = 'deleted_at') THEN
         RAISE EXCEPTION 'Table % n''a pas de colonne deleted_at', p_table_name;
     END IF;
-    v_sql := format('UPDATE %I SET deleted_at = now(), updated_at = now() WHERE id = $1', p_table_name);
+    v_sql := format('UPDATE %I SET deleted_at = clock_timestamp(), updated_at = now() WHERE id = $1', p_table_name);
     EXECUTE v_sql USING p_id;
 END;
 $$ LANGUAGE plpgsql;

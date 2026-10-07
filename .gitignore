@@ -145,3 +145,4 @@ docs/rapports/*.md.backup*
 *.bak
 */_backup-*
 **/_a11y-backup-*/
+docs/phase2/

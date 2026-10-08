@@ -31,6 +31,7 @@ import bcrypt
 import psycopg2
 import psycopg2.extras
 import psycopg2.sql
+import os
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -39,11 +40,59 @@ logger = logging.getLogger(__name__)
 BASE_DIR = Path(__file__).resolve().parent
 DOSSIER_MIGRATIONS_TENANT = BASE_DIR
 
-FICHIERS_MIGRATIONS_TENANT = [
-    "V1__init_tenant_socle.sql",
-    "V2__add_password_history.sql",
-    "V3__add_login_attempts.sql",
-]
+# ============================================================================
+# Dossier des migrations tenant — lecture dynamique (correctif E1)
+# ============================================================================
+# Le dossier est résolu relativement à l'emplacement du script, ce qui
+# fonctionne aussi bien en développement qu'en production.
+#
+# Structure attendue :
+#   <repo>/scripts/provisioning_tenant.py     ← ce fichier
+#   <repo>/db/migration/tenant/V1__*.sql
+#   <repo>/db/migration/tenant/V2__*.sql
+#   ...
+# ============================================================================
+
+DOSSIER_MIGRATIONS_TENANT = Path(__file__).resolve().parent.parent / "db" / "migration" / "tenant"
+
+
+def lister_migrations_tenant() -> list[str]:
+    """
+    Lit et trie les fichiers V*.sql par ordre numérique croissant.
+
+    Returns:
+        Liste triée des noms de fichiers (ex. ['V1__...', 'V2__...', ..., 'V10__...'])
+
+    Raises:
+        FileNotFoundError: si le dossier n'existe pas
+        ValueError: si aucun fichier V*.sql n'est trouvé
+    """
+    if not DOSSIER_MIGRATIONS_TENANT.exists():
+        raise FileNotFoundError(
+            f"Dossier migrations tenant introuvable : {DOSSIER_MIGRATIONS_TENANT}"
+        )
+
+    fichiers = [
+        f for f in os.listdir(DOSSIER_MIGRATIONS_TENANT)
+        if f.startswith('V') and f.endswith('.sql')
+    ]
+
+    if not fichiers:
+        raise ValueError(
+            f"Aucun fichier V*.sql trouvé dans {DOSSIER_MIGRATIONS_TENANT}"
+        )
+
+    # Tri par numéro de version (V1, V2, ..., V9, V10, V11...)
+    fichiers.sort(key=lambda f: int(f.split('__')[0][1:]))
+
+    logger.info("Migrations tenant détectées : %d fichiers", len(fichiers))
+    for f in fichiers:
+        logger.info("  - %s", f)
+
+    return fichiers
+
+
+FICHIERS_MIGRATIONS_TENANT = lister_migrations_tenant()
 
 
 @dataclass

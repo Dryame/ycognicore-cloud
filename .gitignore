@@ -145,4 +145,4 @@ docs/rapports/*.md.backup*
 *.bak
 */_backup-*
 **/_a11y-backup-*/
-docs/phase2/
+# # docs/phase2/    ← ligne 148 : retirée le 09/10/2026 pour versionner les livrables Phase 2

@@ -57,7 +57,7 @@ for file in $FILES; do
     fi
 
     # Espaces en fin
-    count=$(grep -cE ' +$' "$file" 2>/dev/null || echo 0)
+    count=$(grep -cE ' +$' "$file" 2>/dev/null | head -1 || echo 0)
     if [ "$count" -gt 0 ]; then
         issues=$((issues + 1)); msg="$msg\n    - $count ligne(s) avec espaces en fin"
     fi
@@ -78,7 +78,7 @@ for file in $FILES; do
     fi
 
     # TODO/FIXME (warning)
-    todo=$(grep -cE "(TODO|FIXME|XXX|HACK):" "$file" 2>/dev/null || echo 0)
+    todo=$(grep -cE "(TODO|FIXME|XXX|HACK):" "$file" 2>/dev/null | head -1 || echo 0)
     if [ "$todo" -gt 0 ]; then
         TOTAL_WARNINGS=$((TOTAL_WARNINGS + 1))
         msg="$msg\n    WARN: $todo TODO/FIXME"

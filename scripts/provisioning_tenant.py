@@ -6,7 +6,7 @@ intervention humaine, conformément à NFR-SCAL-02 (délai < 5 minutes).
 
 Ce que fait ce script, dans l'ordre :
     1. Crée la base PostgreSQL dédiée au tenant (ycc_tenant_<code>)
-    2. Applique les 3 migrations Flyway tenant (V1, V2, V3)
+    2. Applique les 3 migrations Flyway tenant (V1 à V14)
     3. Enregistre la base dans control_plane.tenant_databases
     4. Crée le premier compte Admin Client (mot de passe temporaire)
     5. Initialise le quota IA du mois en cours (control_plane.ia_quotas)
@@ -36,7 +36,7 @@ import os
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
-# Dossier contenant les 3 fichiers Flyway tenant (V1, V2, V3), dans l'ordre
+# Dossier contenant les 3 fichiers Flyway tenant (V1 à V14), dans l'ordre
 BASE_DIR = Path(__file__).resolve().parent
 DOSSIER_MIGRATIONS_TENANT = BASE_DIR
 
@@ -82,7 +82,7 @@ def lister_migrations_tenant() -> list[str]:
             f"Aucun fichier V*.sql trouvé dans {DOSSIER_MIGRATIONS_TENANT}"
         )
 
-    # Tri par numéro de version (V1, V2, ..., V9, V10, V11...)
+    # Tri par numéro de version (V1, V2, ..., V13, V14)
     fichiers.sort(key=lambda f: int(f.split('__')[0][1:]))
 
     logger.info("Migrations tenant détectées : %d fichiers", len(fichiers))
@@ -154,7 +154,7 @@ def creer_base_tenant(conn_info: ConnexionInfo, nom_base: str) -> None:
 
 def appliquer_migrations_tenant(conn_info: ConnexionInfo, nom_base: str) -> None:
     """
-    Étape 2 : applique les migrations Flyway V1, V2, V3 dans l'ordre,
+    Étape 2 : applique les migrations Flyway V1 à V14 dans l'ordre,
     sur la base tenant nouvellement créée.
 
     Note : en production, on appellerait ici le CLI Flyway réel

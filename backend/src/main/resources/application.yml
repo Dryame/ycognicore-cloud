@@ -87,3 +87,8 @@ management:
     metrics:
       export:
         enabled: true
+
+# --- Runner de migration multi-tenant (T0.9) ---
+ycc:
+  migration:
+    runner: false   # activer avec --ycc.migration.runner=true

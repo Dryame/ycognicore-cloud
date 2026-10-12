@@ -51,6 +51,8 @@ ycc:
     db-host: ${PG_HOST:localhost}
     db-password: ${PG_ADMIN_PASSWORD:postgres}
 
+  migration:
+    runner: true
 logging:
   level:
     root: INFO
@@ -89,6 +91,3 @@ management:
         enabled: true
 
 # --- Runner de migration multi-tenant (T0.9) ---
-ycc:
-  migration:
-    runner: false   # activer avec --ycc.migration.runner=true

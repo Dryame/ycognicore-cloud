@@ -4,6 +4,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+/**
+ * Sender Email (mock pour Sprint H2).
+ * En H3+ : integration SMTP/SES/SendGrid.
+ * Ref. : BL-018
+ */
 @Component
 public class EmailNotificationSender implements NotificationSender {
 

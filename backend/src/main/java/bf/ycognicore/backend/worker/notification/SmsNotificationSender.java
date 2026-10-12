@@ -4,6 +4,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+/**
+ * Sender SMS (mock pour Sprint H2).
+ * En H3+ : integration operateur (Orange Money, Moov, etc.) via passerelle.
+ * Ref. : BL-018
+ */
 @Component
 public class SmsNotificationSender implements NotificationSender {
 

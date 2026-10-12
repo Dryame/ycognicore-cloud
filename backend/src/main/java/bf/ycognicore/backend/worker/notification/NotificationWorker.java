@@ -11,6 +11,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Worker qui consomme la table notifications_queue (control plane).
+ * Traite les notifications par canal avec retry.
+ * Ref. : BL-018, NFR-UX-07
+ */
 @Service
 public class NotificationWorker {
 
@@ -65,6 +70,10 @@ public class NotificationWorker {
         }
     }
 
+    /**
+     * Traite un batch de notifications.
+     * @return nombre de notifications traitees
+     */
     public int processBatch() {
         int processed = 0;
         try (Connection conn = controlPlaneDataSource.getConnection();

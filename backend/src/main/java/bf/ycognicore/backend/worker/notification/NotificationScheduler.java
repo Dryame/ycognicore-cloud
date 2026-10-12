@@ -5,6 +5,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+/**
+ * Scheduler du worker notifications.
+ * Execution toutes les 5 secondes.
+ * Ref. : BL-018, NFR-UX-07
+ */
 @Component
 public class NotificationScheduler {
 

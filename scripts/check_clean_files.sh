@@ -91,8 +91,8 @@ for file in $FILES; do
         if [ "$op" -ne "$cp" ]; then
             issues=$((issues + 1)); msg="$msg\n    - Parentheses desequilibrees ($op vs $cp)"
         fi
-        do_cnt=$(grep -c "DO \$\$" "$file" || echo 0)
-        end_cnt=$(grep -c "END;" "$file" || echo 0)
+        do_cnt=$(grep -c "DO \$\$" "$file" 2>/dev/null | head -1 || echo 0)
+        end_cnt=$(grep -c "END;" "$file" 2>/dev/null | head -1 || echo 0)
         if [ "$do_cnt" -gt 0 ] && [ "$end_cnt" -lt "$do_cnt" ]; then
             issues=$((issues + 1)); msg="$msg\n    - Bloc DO non ferme"
         fi

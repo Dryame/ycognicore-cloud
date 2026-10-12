@@ -23,18 +23,14 @@ BEGIN
     RAISE NOTICE '=============================================';
 
     -- Nettoyer les données de test (garder les seeds)
-    DELETE FROM crm_regles_executions;
-    DELETE FROM crm_regles_automatisation;
-    DELETE FROM rendez_vous_participants;
-    DELETE FROM rendez_vous;
-    DELETE FROM interactions;
-    DELETE FROM activites;
-    DELETE FROM opportunites_historique_etapes;
-    DELETE FROM opportunites;
-    DELETE FROM campagne_cibles;
-    DELETE FROM campagnes;
-    DELETE FROM contacts;
-    DELETE FROM prospects;
+    -- Nettoyer les données de test (TRUNCATE contourne les triggers)
+    -- Les seeds (pipelines, pipeline_etapes) sont préservés
+    TRUNCATE crm_regles_executions, crm_regles_automatisation,
+             rendez_vous_participants, rendez_vous,
+             interactions, activites,
+             opportunites_historique_etapes, opportunites,
+             campagne_cibles, campagnes,
+             contacts, prospects CASCADE;
 
     -- Tiers de test
     INSERT INTO tiers (code, type_tiers, categorie, raison_sociale, regime_fiscal)
@@ -169,3 +165,6 @@ BEGIN
     RAISE NOTICE '=============================================';
 END;
 $$;
+
+
+

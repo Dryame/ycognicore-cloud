@@ -5,6 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.context.annotation.Profile;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.OffsetDateTime;
@@ -14,6 +15,7 @@ import java.util.Map;
  * Endpoints de test RBAC (BL-013).
  * Seront supprimes apres validation.
  */
+@Profile("!prod")
 @RestController
 @RequestMapping("/api/_poc/rbac")
 public class RbacTestController {

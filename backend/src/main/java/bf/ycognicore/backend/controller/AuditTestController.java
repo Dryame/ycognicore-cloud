@@ -1,5 +1,7 @@
 package bf.ycognicore.backend.controller;
 
+import org.springframework.context.annotation.Profile;
+
 import bf.ycognicore.backend.audit.Auditable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -11,6 +13,7 @@ import java.util.Map;
 /**
  * Endpoints de test BL-014 (Audit AOP).
  */
+@Profile("!prod")
 @RestController
 @RequestMapping("/api/_poc/audit")
 public class AuditTestController {

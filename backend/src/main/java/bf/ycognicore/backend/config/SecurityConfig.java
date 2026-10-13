@@ -114,7 +114,7 @@ public class SecurityConfig {
                         .requestMatchers(exact("/api/auth/refresh", "POST")).permitAll()
                         .requestMatchers(exact("/api/auth/me", "GET")).permitAll()
                         .requestMatchers(prefix("/api/_poc")).permitAll()
-                        .requestMatchers(prefix("/api/admin/partitions")).permitAll()
+                        .requestMatchers(prefix("/api/admin/partitions")).hasAnyAuthority("ADMIN", "SUPERADMIN")
                         .requestMatchers(prefix("/actuator")).permitAll()
                         .requestMatchers(prefix("/error")).permitAll()
                         .anyRequest().authenticated()

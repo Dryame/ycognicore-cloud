@@ -25,8 +25,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .excludePathPatterns(
                         "/api/auth/**",
                         "/api/_poc/**",
-                        "/api/admin/partitions/**",
-                        "/error"
+                                    "/error"
                 );
     }
 }

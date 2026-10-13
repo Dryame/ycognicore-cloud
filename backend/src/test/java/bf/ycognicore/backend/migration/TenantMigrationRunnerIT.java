@@ -37,7 +37,7 @@ class TenantMigrationRunnerIT {
 
         Flyway flyway = Flyway.configure()
                 .dataSource(ds)
-                .locations("classpath:db/migration/tenant")
+                .locations("filesystem:../db/migration/tenant")
                 .baselineOnMigrate(true)
                 .baselineVersion("13")
                 .table("flyway_schema_history")

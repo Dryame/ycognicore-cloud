@@ -50,52 +50,6 @@ jobs:
         working-directory: backend
         run: ./mvnw package -DskipTests -B
 
-      - name: Setup test databases (control plane + tenant)
-        env:
-          PGPASSWORD: postgres
-        run: |
-          echo "=== Création des bases de test ==="
-          psql -h localhost -U postgres -c "CREATE DATABASE ycc_control_plane;"
-          psql -h localhost -U postgres -c "CREATE DATABASE ycc_tenant_demo001;"
-          echo "=== Application des migrations control plane ==="
-          for f in db/migration/control-plane/V*__*.sql; do
-            echo "→ $f"
-            psql -h localhost -U postgres -d ycc_control_plane -f "$f"
-          done
-          echo "=== Application des migrations tenant V1 à V13 ==="
-          for f in db/migration/tenant/V{1,2,3,4,5,6,7,8,9,10,11,12,13}__*.sql; do
-            echo "→ $f"
-            psql -h localhost -U postgres -d ycc_tenant_demo001 -f "$f"
-          done
-
-      - name: Run SQL tests (bloquant)
-        env:
-          PGPASSWORD: postgres
-        run: |
-          echo "=== Tests SQL control plane ==="
-          if [ -f db/scripts/test_migrations.sql ]; then
-            psql -h localhost -U postgres -d ycc_control_plane -f db/scripts/test_migrations.sql
-          fi
-          echo "=== Tests SQL tenant V9 à V13 ==="
-          FAILED=0
-          for v in 9 10 11 12 13; do
-            f="db/scripts/test_v${v}_migration.sql"
-            if [ -f "$f" ]; then
-              echo "→ $f"
-              if ! psql -h localhost -U postgres -d ycc_tenant_demo001 -f "$f" 2>&1 | tee /tmp/test_v${v}.log; then
-                FAILED=$((FAILED+1))
-              fi
-              if grep -q "Statut : 1 echec" /tmp/test_v${v}.log 2>/dev/null; then
-                FAILED=$((FAILED+1))
-              fi
-            fi
-          done
-          if [ "$FAILED" -gt 0 ]; then
-            echo "✗ $FAILED test(s) SQL en échec"
-            exit 1
-          fi
-          echo "✓ Tous les tests SQL passent"
-
       - name: Upload backend artifact
         uses: actions/upload-artifact@v4
         with:

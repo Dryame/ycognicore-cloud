@@ -1,0 +1,19 @@
+# ============================================================================
+# Profil PROD — aucune valeur par defaut
+#
+# Toutes les valeurs sensibles proviennent EXCLUSIVEMENT de variables
+# d environnement. Le demarrage echoue si elles sont absentes.
+#
+# Activation : --spring.profiles.active=prod
+# ============================================================================
+
+logging:
+  level:
+    root: WARN
+    bf.ycognicore: INFO
+    org.hibernate.SQL: WARN
+
+management:
+  endpoint:
+    health:
+      show-details: never

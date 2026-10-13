@@ -3,9 +3,9 @@ spring:
     name: backend
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/ycc_control_plane
-    username: postgres
-    password: postgres
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/ycc_control_plane}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD}
     hikari:
       pool-name: cp-pool
       maximum-pool-size: 5
@@ -27,12 +27,12 @@ spring:
 ycc:
   vault:
     url: ${VAULT_URL:http://localhost:8200}
-    token: ${VAULT_TOKEN:ycc-dev-token}
+    token: ${VAULT_TOKEN}
     transit-key: ycc-mfa-key
     issuer: "yCogniCore Cloud"
 
   jwt:
-    secret: "ZGvtby1zWnyXZQtxmWvbGFjZ1s1tZSlpbilwcm9kdWN0aW9uLXVzZXItc2NvcGUtZ2x5Xnl1X21lc3NhZ2Utc2lnbmVkLWtleQ=="
+    secret: ${JWT_SECRET}
     access-token-expiration-minutes: 30
     refresh-token-expiration-days: 7
 
@@ -49,15 +49,16 @@ ycc:
     months-ahead: 3
     cron: "0 0 2 1 * *"
     db-host: ${PG_HOST:localhost}
-    db-password: ${PG_ADMIN_PASSWORD:postgres}
+    db-password: ${PG_ADMIN_PASSWORD}
 
   migration:
-    runner: true
+    runner: false   # activé uniquement avec --ycc.migration.runner=true
+
 logging:
   level:
     root: INFO
-    bf.ycognicore: DEBUG
-    org.hibernate.SQL: DEBUG
+    bf.ycognicore: INFO
+    org.hibernate.SQL: WARN
 
 server:
   port: 8080
@@ -89,5 +90,3 @@ management:
     metrics:
       export:
         enabled: true
-
-# --- Runner de migration multi-tenant (T0.9) ---

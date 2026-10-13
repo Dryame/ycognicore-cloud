@@ -1,0 +1,26 @@
+# ============================================================================
+# Profil DEV — valeurs de développement local
+# NE PAS UTILISER EN PRODUCTION
+#
+# Activation : --spring.profiles.active=dev
+# ============================================================================
+
+spring:
+  datasource:
+    password: ${DB_PASSWORD:postgres}
+
+ycc:
+  vault:
+    token: ${VAULT_TOKEN:ycc-dev-token}
+
+  jwt:
+    # HS512 : clé ≥ 64 octets (512 bits)
+    secret: ${JWT_SECRET:dev-secret-key-must-be-64-bytes-minimum-for-hs512-signing-xxxxxxxxxxxxxx}
+
+  partition:
+    db-password: ${PG_ADMIN_PASSWORD:postgres}
+
+logging:
+  level:
+    bf.ycognicore: DEBUG
+    org.hibernate.SQL: DEBUG

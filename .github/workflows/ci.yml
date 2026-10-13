@@ -1,4 +1,4 @@
-name: CI - yCogniCore Cloud
+name: CI — yCogniCore Cloud
 
 on:
   push:
@@ -11,6 +11,22 @@ jobs:
   backend:
     name: Backend (Java 21 + Maven)
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ycc_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,14 +38,63 @@ jobs:
           java-version: '21'
           cache: maven
 
-      - name: Build backend
+      - name: Compile backend
         working-directory: backend
-        run: ./mvnw clean package -DskipTests
+        run: ./mvnw clean compile -B
 
-      - name: Run backend tests
+      - name: Run backend tests (bloquant)
         working-directory: backend
-        run: ./mvnw test
-        continue-on-error: true
+        run: ./mvnw test -B
+
+      - name: Package backend
+        working-directory: backend
+        run: ./mvnw package -DskipTests -B
+
+      - name: Setup test databases (control plane + tenant)
+        env:
+          PGPASSWORD: postgres
+        run: |
+          echo "=== Création des bases de test ==="
+          psql -h localhost -U postgres -c "CREATE DATABASE ycc_control_plane;"
+          psql -h localhost -U postgres -c "CREATE DATABASE ycc_tenant_demo001;"
+          echo "=== Application des migrations control plane ==="
+          for f in db/migration/control-plane/V*__*.sql; do
+            echo "→ $f"
+            psql -h localhost -U postgres -d ycc_control_plane -f "$f"
+          done
+          echo "=== Application des migrations tenant V1 à V13 ==="
+          for f in db/migration/tenant/V{1,2,3,4,5,6,7,8,9,10,11,12,13}__*.sql; do
+            echo "→ $f"
+            psql -h localhost -U postgres -d ycc_tenant_demo001 -f "$f"
+          done
+
+      - name: Run SQL tests (bloquant)
+        env:
+          PGPASSWORD: postgres
+        run: |
+          echo "=== Tests SQL control plane ==="
+          if [ -f db/scripts/test_migrations.sql ]; then
+            psql -h localhost -U postgres -d ycc_control_plane -f db/scripts/test_migrations.sql
+          fi
+          echo "=== Tests SQL tenant V9 à V13 ==="
+          FAILED=0
+          for v in 9 10 11 12 13; do
+            f="db/scripts/test_v${v}_migration.sql"
+            if [ -f "$f" ]; then
+              echo "→ $f"
+              if ! psql -h localhost -U postgres -d ycc_tenant_demo001 -f "$f" 2>&1 | tee /tmp/test_v${v}.log; then
+                FAILED=$((FAILED+1))
+              fi
+              if grep -q "Statut : 1 echec" /tmp/test_v${v}.log 2>/dev/null; then
+                FAILED=$((FAILED+1))
+              fi
+            fi
+          done
+          if [ "$FAILED" -gt 0 ]; then
+            echo "✗ $FAILED test(s) SQL en échec"
+            exit 1
+          fi
+          echo "✓ Tous les tests SQL passent"
 
       - name: Upload backend artifact
         uses: actions/upload-artifact@v4
@@ -37,6 +102,20 @@ jobs:
           name: backend-jar
           path: backend/target/*.jar
           retention-days: 7
+
+  security:
+    name: Security (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   frontend:
     name: Frontend (Node 22 + Angular 22)
@@ -63,39 +142,38 @@ jobs:
       - name: Install @axe-core/cli
         run: npm install -g @axe-core/cli
 
-      - name: Run A11y audit (WCAG 2.1 AA)
+      - name: Run AllY audit (WCAG 2.1 AA)
         run: |
-          echo "🔍 Démarrage du serveur Angular..."
+          echo "Démarrage du serveur Angular..."
           cd frontend
           npx ng serve --port 4200 --poll=2000 &
           NG_PID=$!
           sleep 30
 
-          echo "🔍 Audit A11y..."
-          axe http://localhost:4200/login             --tags wcag2a,wcag2aa,wcag21a,wcag21aa             --save /tmp/axe-report.json || true
+          echo "Audit AllY..."
+          axe http://localhost:4200/login --tags wcag2a,wcag2aa,wcag21a,wcag21aa --save /tmp/axe-report.json || true
 
-          echo "🔍 Analyse du rapport..."
+          echo "Analyse du rapport..."
           if [ -f /tmp/axe-report.json ]; then
             CRITICAL=$(python3 -c "import json; d=json.load(open('/tmp/axe-report.json')); print(sum(1 for v in d.get('violations',[]) if v.get('impact')=='critical'))" 2>/dev/null || echo "0")
             echo "Violations critiques : $CRITICAL"
             if [ "$CRITICAL" -gt 0 ]; then
-              echo "❌ Violations A11y critiques détectées"
+              echo "✗ Violations AllY critiques détectées"
               kill $NG_PID || true
               exit 1
             fi
-            echo "✅ Aucune violation critique"
+            echo "✓ Aucune violation critique"
           fi
           kill $NG_PID || true
 
-      - name: Upload A11y report
+      - name: Upload AllY report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: a11y-report
+          name: ally-report
           path: /tmp/axe-report.json
           retention-days: 7
           if-no-files-found: ignore
-
 
       - name: Upload frontend artifact
         uses: actions/upload-artifact@v4
@@ -124,15 +202,19 @@ jobs:
   summary:
     name: Resume
     runs-on: ubuntu-latest
-    needs: [backend, frontend, quality]
+    needs: [backend, frontend, quality, security]
     if: always()
     steps:
       - name: Statut global
         run: |
-          echo "Backend   : ${{ needs.backend.result }}"
-          echo "Frontend  : ${{ needs.frontend.result }}"
-          echo "Qualite   : ${{ needs.quality.result }}"
-          if [ "${{ needs.backend.result }}" = "success" ] && [ "${{ needs.frontend.result }}" = "success" ] && [ "${{ needs.quality.result }}" = "success" ]; then
+          echo "Backend  : ${{ needs.backend.result }}"
+          echo "Frontend : ${{ needs.frontend.result }}"
+          echo "Qualite  : ${{ needs.quality.result }}"
+          echo "Securite : ${{ needs.security.result }}"
+          if [ "${{ needs.backend.result }}" = "success" ] && \
+             [ "${{ needs.frontend.result }}" = "success" ] && \
+             [ "${{ needs.quality.result }}" = "success" ] && \
+             [ "${{ needs.security.result }}" = "success" ]; then
             echo "Pipeline : VERT"
             exit 0
           else

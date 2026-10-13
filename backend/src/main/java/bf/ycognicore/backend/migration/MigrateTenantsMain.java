@@ -16,20 +16,23 @@ import java.util.List;
  * Runner de migration tenant standalone (sans Spring Boot).
  *
  * Usage :
- *   java -cp target/classes:$(deps) bf.ycognicore.backend.migration.MigrateTenantsMain
+ *   java -cp target/classes:$(cat /tmp/cp.txt) \
+ *        bf.ycognicore.backend.migration.MigrateTenantsMain
  *
  * Variables d'environnement :
  *   CP_HOST, CP_PORT, CP_DB, CP_USER, CP_PASSWORD    (control plane)
  *   TENANT_PASSWORD                                   (password des bases tenant)
  *
- * Ref. : T0.9, T0.10, M30, D-01
+ * Ref. : T0.9, T0.10, M30, D-01, C36
  */
 public class MigrateTenantsMain {
 
     private static final Logger log = LoggerFactory.getLogger(MigrateTenantsMain.class);
 
-    static final String MIGRATION_LOCATION = "filesystem:/home/idrissa_yameogo/projets/ycognicore-cloud/db/migration/tenant";
+    static final String MIGRATION_LOCATION =
+            "filesystem:" + System.getProperty("user.dir") + "/../db/migration/tenant";
     static final String BASELINE_VERSION = "13";
+    static final String SSL_MODE = "?sslmode=disable";
 
     public static void main(String[] args) throws Exception {
         String cpHost = env("CP_HOST", "localhost");
@@ -39,7 +42,7 @@ public class MigrateTenantsMain {
         String cpPassword = env("CP_PASSWORD", "postgres");
         String tenantPassword = env("TENANT_PASSWORD", "postgres");
 
-        String cpUrl = "jdbc:postgresql://" + cpHost + ":" + cpPort + "/" + cpDb;
+        String cpUrl = "jdbc:postgresql://" + cpHost + ":" + cpPort + "/" + cpDb + SSL_MODE;
         log.info("Control plane : {}", cpUrl);
 
         List<TenantInfo> tenants = loadTenants(cpUrl, cpUser, cpPassword);
@@ -85,7 +88,7 @@ public class MigrateTenantsMain {
     private static void migrateTenant(TenantInfo t, String defaultHost, int defaultPort, String password) {
         String host = t.host != null ? t.host : defaultHost;
         int port = t.port > 0 ? t.port : defaultPort;
-        String url = "jdbc:postgresql://" + host + ":" + port + "/" + t.dbName;
+        String url = "jdbc:postgresql://" + host + ":" + port + "/" + t.dbName + SSL_MODE;
         log.info("Tenant {} — {}", t.dbName, url);
 
         Flyway flyway = Flyway.configure()

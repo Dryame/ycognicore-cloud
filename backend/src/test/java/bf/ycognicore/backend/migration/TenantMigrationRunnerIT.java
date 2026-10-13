@@ -23,7 +23,7 @@ class TenantMigrationRunnerIT {
             .withPassword("postgres");
 
     @Test
-    void baseline_then_apply_V14() throws Exception {
+    void baseline_then_apply_migrations() throws Exception {
         DriverManagerDataSource ds = new DriverManagerDataSource();
         ds.setDriverClassName("org.postgresql.Driver");
         ds.setUrl(pg.getJdbcUrl());
@@ -48,7 +48,7 @@ class TenantMigrationRunnerIT {
         var result = flyway.migrate();
 
         assertThat(result.migrationsExecuted).isGreaterThanOrEqualTo(1);
-        assertThat(result.targetSchemaVersion).isEqualTo("14");
+        assertThat(Integer.parseInt(result.targetSchemaVersion)).isGreaterThanOrEqualTo(14);
 
         try (Connection conn = ds.getConnection();
              Statement stmt = conn.createStatement();

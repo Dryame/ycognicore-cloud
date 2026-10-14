@@ -355,3 +355,109 @@ curl -H "Authorization: Bearer $TOKEN" \
 ---
 
 **Documentation RBAC v1.0 — 02/10/2026**
+
+---
+
+## Renforcement P1 — Migrations V15 et V16
+
+**Date** : 13 octobre 2026
+**Références** : ADR-032, ADR-033, constats C3 et C31
+**Migrations** : V15, V16
+**Commit** : 451528f
+
+---
+
+### V15 — Anti-TRUNCATE
+
+Caractéristiques :
+
+- Fonction : `forbid_truncate()` — RAISE EXCEPTION (ERRCODE 42501)
+- Triggers créés : 10 (BEFORE TRUNCATE, niveau STATEMENT)
+- Tables protégées : audit_log + 4 partitions + 5 tables append-only
+- Révocation : REVOKE TRUNCATE ON audit_log FROM ycc_tenant_app
+- Idempotence : oui
+- Défensive : oui (tolère l'absence de tables)
+
+Liste des tables append-only protégées :
+
+- password_history — historique des mots de passe
+- interactions — journal CRM
+- opportunites_historique_etapes — historique pipeline
+- documents_vente_historique_statuts — historique statuts Ventes
+- audit_log — registre d'audit (parent + 4 partitions)
+
+---
+
+### V16 — RBAC strict
+
+Liste des tables dont le privilège DELETE est révoqué :
+
+- users — GRANT issu de V1 (ligne 235)
+- roles — GRANT issu de V1 (ligne 235)
+- role_permissions — GRANT issu de V1 (ligne 235)
+- user_roles — GRANT issu de V1 (ligne 235)
+- sessions_history — GRANT issu de V1 (ligne 235)
+- numero_sequences — GRANT issu de V4 (ligne 98)
+- user_invitations — GRANT issu de V4 (ligne 98)
+
+Caractéristiques :
+
+- Commande : REVOKE DELETE ON <table> FROM ycc_tenant_app
+- Idempotence : oui (REVOKE est idempotent)
+- Défensive : oui (tolère l'absence du rôle)
+- Vérification : RAISE EXCEPTION si un GRANT DELETE subsiste
+
+---
+
+### Impact sur la matrice RBAC
+
+Avant P1 :
+
+- Permissions fixes : 6
+- Modules RBAC : 16
+- Tables avec DELETE accordé : 7
+- Triggers anti-TRUNCATE : 0
+- Tables protégées contre DELETE : 0
+
+Après P1 :
+
+- Permissions fixes : 6 (inchangé)
+- Modules RBAC : 16 (inchangé)
+- Tables avec DELETE accordé : 0
+- Triggers anti-TRUNCATE : 10
+- Tables protégées contre DELETE : 7
+
+---
+
+### Vérifications
+
+Aucun GRANT DELETE résiduel — requête :
+
+    SELECT COUNT(*) FROM information_schema.role_table_grants
+    WHERE grantee = 'ycc_tenant_app' AND privilege_type = 'DELETE'
+      AND table_name IN ('users','roles','role_permissions','user_roles',
+                         'sessions_history','numero_sequences','user_invitations');
+
+Résultat attendu : 0
+
+TRUNCATE bloqué — commande :
+
+    TRUNCATE audit_log;
+
+Résultat attendu : ERROR: TRUNCATE interdit sur audit_log (protection append-only)
+
+Résultats obtenus en production :
+
+- ycc_tenant_demo001 : TRUNCATE bloqué, 0 GRANT DELETE résiduel
+- ycc_tenant_demo002 : TRUNCATE bloqué, 0 GRANT DELETE résiduel
+
+---
+
+### Suivi
+
+Extensions prévues :
+
+- Sessions actives — Phase 3
+- Appareils — Phase 3
+- Droits spéciaux de console (D-11) — Phase 3
+- Conservation des 6 permissions fixes — toutes phases

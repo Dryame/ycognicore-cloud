@@ -12,3 +12,5 @@
 
 ## 1. Vue d'ensemble
 [... copier intégralement le contenu de la pièce jointe BACKLOG v3.0 ...]
+
+- C39 — Numérotation migration P3 (V17 tenant, V8 CP) non reflétée dans le planning v1.2

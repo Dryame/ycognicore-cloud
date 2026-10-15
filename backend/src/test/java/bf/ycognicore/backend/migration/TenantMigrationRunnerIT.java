@@ -43,6 +43,7 @@ class TenantMigrationRunnerIT {
                 .table("flyway_schema_history")
                 .validateOnMigrate(true)
                 .cleanDisabled(true)
+                .target("14")
                 .load();
 
         var result = flyway.migrate();

@@ -89,6 +89,22 @@ public class PartitionMaintenanceService {
             try (Connection conn = connectionProvider.getConnection(tenant.code);
                  Statement stmt = conn.createStatement()) {
                 stmt.execute(sql);
+                // P3-7 : recopier la protection anti-TRUNCATE sur la nouvelle partition
+                if ("audit_log".equals(table)) {
+                    String sqlTrigger = String.format(
+                        "CREATE TRIGGER trg_%s_no_truncate " +
+                        "BEFORE TRUNCATE ON %s " +
+                        "FOR EACH STATEMENT EXECUTE FUNCTION forbid_truncate()",
+                        nomPartition, nomPartition);
+                    try {
+                        stmt.execute(sqlTrigger);
+                        logger.debug("P3-7 : trigger anti-TRUNCATE ajoute sur {}", nomPartition);
+                    } catch (SQLException e) {
+                        if (e.getMessage() == null || !e.getMessage().contains("already exists")) {
+                            throw e;
+                        }
+                    }
+                }
                 logger.debug("  {} . {}", tenant.dbName, nomPartition);
             }
         } catch (SQLException e) {

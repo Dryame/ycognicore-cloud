@@ -1,7 +1,6 @@
 package bf.ycognicore.backend.audit;
 
 import bf.ycognicore.backend.multitenant.TenantContext;
-import bf.ycognicore.backend.service.AuditService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,11 +25,11 @@ public class AuditAspect {
 
     private static final Logger logger = LoggerFactory.getLogger(AuditAspect.class);
 
-    private final AuditService auditService;
+    private final CentralAuditService centralAuditService;
     private final ObjectMapper objectMapper;
 
-    public AuditAspect(AuditService auditService, ObjectMapper objectMapper) {
-        this.auditService = auditService;
+    public AuditAspect(CentralAuditService centralAuditService, ObjectMapper objectMapper) {
+        this.centralAuditService = centralAuditService;
         this.objectMapper = objectMapper;
     }
 
@@ -39,7 +38,6 @@ public class AuditAspect {
         long start = System.currentTimeMillis();
         boolean succes = true;
         String erreur = null;
-
         try {
             return pjp.proceed();
         } catch (Throwable t) {
@@ -49,24 +47,36 @@ public class AuditAspect {
         } finally {
             try {
                 AuditEvent event = buildEvent(pjp, auditable, succes, erreur,
-                        System.currentTimeMillis() - start);
-                auditService.persist(event);
+                    System.currentTimeMillis() - start);
+                OperationCritique critique = resolveCritique(auditable.action());
+                centralAuditService.persist(event, critique);
             } catch (Exception e) {
-                logger.warn("Audit non persiste : {}", e.getMessage());
+                logger.warn("Audit non persisté : {}", e.getMessage());
             }
         }
     }
 
-    private AuditEvent buildEvent(ProceedingJoinPoint pjp, Auditable a,
-                                   boolean succes, String erreur, long dureeMs) {
+    /** Map action → OperationCritique (null si non critique). */
+    private OperationCritique resolveCritique(String action) {
+        if (action == null) return null;
+        try {
+            return OperationCritique.valueOf(action);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    private AuditEvent buildEvent(ProceedingJoinPoint pjp, Auditable auditable,
+                                  boolean succes, String erreur, long dureeMs) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         UUID userId = null;
         if (auth != null && auth.getName() != null) {
             try { userId = UUID.fromString(auth.getName()); } catch (Exception ignored) {}
         }
+        UUID entiteId = null;
 
         String ip = "0.0.0.0";
-        String userAgent = "unknown";
+        String userAgent = "inconnu";
         var attrs = RequestContextHolder.getRequestAttributes();
         if (attrs instanceof ServletRequestAttributes sra) {
             HttpServletRequest req = sra.getRequest();
@@ -78,24 +88,17 @@ public class AuditAspect {
         }
 
         ObjectNode details = objectMapper.createObjectNode();
-        details.put("method", ((MethodSignature) pjp.getSignature()).getMethod().getName());
         details.put("dureeMs", dureeMs);
-        if (erreur != null) {
-            details.put("erreur", erreur);
-        }
+        if (erreur != null) details.put("erreur", erreur);
+        MethodSignature sig = (MethodSignature) pjp.getSignature();
+        details.put("methode", sig.toShortString());
+
+        String tenantCode = TenantContext.getTenantId();
 
         return new AuditEvent(
-                userId,
-                TenantContext.getTenantId(),
-                a.action(),
-                a.entite(),
-                a.module(),
-                a.niveau(),
-                succes,
-                ip,
-                userAgent,
-                details,
-                OffsetDateTime.now()
+            userId, tenantCode, auditable.action(), auditable.entite(),
+            entiteId, auditable.module(), auditable.niveau(), succes,
+            ip, userAgent, details, OffsetDateTime.now()
         );
     }
 }

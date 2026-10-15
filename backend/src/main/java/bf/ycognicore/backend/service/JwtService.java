@@ -10,11 +10,10 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Generation et validation des JWT (HS512).
- * Ref. : NFR-SEC-11, BL-011
+ * Ref. : NFR-SEC-11, BL-011, D-13, F2, F3.
  */
 @Service
 public class JwtService {
@@ -26,20 +25,23 @@ public class JwtService {
     public JwtService(
             @Value("${ycc.jwt.secret}") String secret,
             @Value("${ycc.jwt.access-token-expiration-minutes:30}") long accessMinutes,
-            @Value("${ycc.jwt.refresh-token-expiration-days:7}") long refreshDays
-    ) {
+            @Value("${ycc.jwt.refresh-token-expiration-days:7}") long refreshDays) {
         this.signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.accessTtlMs = accessMinutes * 60_000L;
         this.refreshTtlMs = refreshDays * 24 * 60 * 60_000L;
     }
 
-    /**
-     * Genere un access token signe.
-     */
+    /** Genere un access token signe (compat ancienne signature). */
     public String generateAccessToken(String userId, String email, String userType,
-                                       String tenantCode, List<String> roles) {
+                                      String tenantCode, List<String> roles) {
+        return generateAccessToken(userId, email, userType, tenantCode, roles, null);
+    }
+
+    /** Surcharge avec jti (L3.1b). jti=null => comportement inchange. */
+    public String generateAccessToken(String userId, String email, String userType,
+                                      String tenantCode, List<String> roles, String jti) {
         long now = System.currentTimeMillis();
-        return Jwts.builder()
+        var builder = Jwts.builder()
                 .subject(userId)
                 .claim("email", email)
                 .claim("userType", userType)
@@ -48,28 +50,34 @@ public class JwtService {
                 .claim("type", "access")
                 .issuedAt(new Date(now))
                 .expiration(new Date(now + accessTtlMs))
-                .signWith(signingKey, Jwts.SIG.HS512)
-                .compact();
+                .signWith(signingKey, Jwts.SIG.HS512);
+        if (jti != null) {
+            builder.id(jti);
+        }
+        return builder.compact();
     }
 
-    /**
-     * Genere un refresh token.
-     */
+    /** Genere un refresh token (compat ancienne signature). */
     public String generateRefreshToken(String userId) {
+        return generateRefreshToken(userId, null);
+    }
+
+    /** Surcharge avec jti (L3.1b). jti=null => comportement inchange. */
+    public String generateRefreshToken(String userId, String jti) {
         long now = System.currentTimeMillis();
-        return Jwts.builder()
+        var builder = Jwts.builder()
                 .subject(userId)
                 .claim("type", "refresh")
                 .issuedAt(new Date(now))
                 .expiration(new Date(now + refreshTtlMs))
-                .signWith(signingKey, Jwts.SIG.HS512)
-                .compact();
+                .signWith(signingKey, Jwts.SIG.HS512);
+        if (jti != null) {
+            builder.id(jti);
+        }
+        return builder.compact();
     }
 
-    /**
-     * Valide et retourne les claims du token.
-     * Lance une exception jjwt si invalide/expire.
-     */
+    /** Valide et retourne les claims du token. */
     public Claims parseToken(String token) {
         return Jwts.parser()
                 .verifyWith(signingKey)
@@ -80,5 +88,9 @@ public class JwtService {
 
     public long getAccessTtlSeconds() {
         return accessTtlMs / 1000L;
+    }
+
+    public long getRefreshTtlSeconds() {
+        return refreshTtlMs / 1000L;
     }
 }

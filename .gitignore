@@ -146,3 +146,6 @@ docs/rapports/*.md.backup*
 */_backup-*
 **/_a11y-backup-*/
 # # docs/phase2/    ← ligne 148 : retirée le 09/10/2026 pour versionner les livrables Phase 2
+
+# GeoIP database (MaxMind GeoLite2 — non versionnée, mise à jour mensuelle N-5)
+**/*.mmdb

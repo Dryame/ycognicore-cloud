@@ -2,6 +2,7 @@ package bf.ycognicore.backend.controller;
 
 import bf.ycognicore.backend.dto.MfaSetupResponse;
 import bf.ycognicore.backend.dto.MfaVerifyRequest;
+import bf.ycognicore.backend.service.MfaChallengeService;
 import bf.ycognicore.backend.service.MfaService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -23,9 +24,15 @@ public class MfaController {
     private static final Logger logger = LoggerFactory.getLogger(MfaController.class);
 
     private final MfaService mfaService;
+    private final MfaChallengeService mfaChallengeService;
+    private final bf.ycognicore.backend.repository.tenant.UserRepository userRepository;
 
-    public MfaController(MfaService mfaService) {
+    public MfaController(MfaService mfaService,
+                          MfaChallengeService mfaChallengeService,
+                          bf.ycognicore.backend.repository.tenant.UserRepository userRepository) {
         this.mfaService = mfaService;
+        this.mfaChallengeService = mfaChallengeService;
+        this.userRepository = userRepository;
     }
 
     /**
@@ -74,4 +81,43 @@ public class MfaController {
                 "message", "Code MFA invalide"
         ));
     }
+
+    /**
+     * Verification MFA par challenge (F1).
+     * Remplace l'ancien /verify (secret en clair).
+     */
+    @org.springframework.web.bind.annotation.PostMapping("/challenge-verify")
+    public org.springframework.http.ResponseEntity<bf.ycognicore.backend.dto.LoginResponse> verifyChallenge(
+            @jakarta.validation.Valid @org.springframework.web.bind.annotation.RequestBody
+            bf.ycognicore.backend.dto.MfaChallengeVerifyRequest req,
+            org.springframework.security.core.Authentication auth) {
+
+        var challenge = mfaChallengeService.consume(req.challengeToken());
+        if (challenge == null) {
+            return org.springframework.http.ResponseEntity.status(401).build();
+        }
+
+        int code;
+        try { code = Integer.parseInt(req.code()); }
+        catch (NumberFormatException e) {
+            return org.springframework.http.ResponseEntity.status(400).build();
+        }
+
+        var user = userRepository.findById(challenge.userId()).orElse(null);
+        if (user == null || !user.isMfaEnabled() || user.getMfaSecretPackage() == null) {
+            return org.springframework.http.ResponseEntity.status(401).build();
+        }
+
+        boolean ok = mfaService.verifyCode(
+            mfaService.decryptSecret(user.getMfaSecretPackage()), code);
+        if (!ok) {
+            return org.springframework.http.ResponseEntity.status(401).build();
+        }
+
+        // Emettre les tokens via AuthDispatcherService (deja valides par challenge)
+        // Simplification : on retourne juste 200 pour l'instant, la generation
+        // complete des tokens sera branchee en L3.5 avec SessionService.create()
+        return org.springframework.http.ResponseEntity.ok().build();
+    }
+
 }

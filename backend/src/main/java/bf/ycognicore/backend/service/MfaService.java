@@ -62,6 +62,34 @@ public class MfaService {
         return ok;
     }
 
+
+    /**
+     * Setup + persistance du secret chiffré dans users.mfa_secret_package.
+     * Ref. : T3.2, V14.
+     */
+    public MfaSetupResult setupAndPersist(String userEmail, bf.ycognicore.backend.repository.tenant.UserRepository repo) {
+        MfaSetupResult result = setup(userEmail);
+        JsonNode encrypted = encryptSecret(result.secret());
+        repo.findByEmail(userEmail).ifPresent(u -> {
+            u.setMfaSecretPackage(encrypted);
+            u.setMfaEnabled(true);
+            repo.save(u);
+        });
+        return result;
+    }
+
+    /**
+     * Vérifie un code MFA pour un user (charge, déchiffre, vérifie).
+     * Retourne false si user introuvable ou MFA non configuré.
+     */
+    public boolean verifyCodeForUser(String email, int code,
+                                     bf.ycognicore.backend.repository.tenant.UserRepository repo) {
+        return repo.findByEmail(email)
+            .filter(u -> u.isMfaEnabled() && u.getMfaSecretPackage() != null)
+            .map(u -> verifyCode(decryptSecret(u.getMfaSecretPackage()), code))
+            .orElse(false);
+    }
+
     public record MfaSetupResult(String secret, String qrUrl) {}
 
     public record MfaVerifyResult(boolean success, String message) {}

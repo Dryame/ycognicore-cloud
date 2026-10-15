@@ -6,6 +6,7 @@ import bf.ycognicore.backend.dto.RefreshRequest;
 import bf.ycognicore.backend.dto.RefreshResponse;
 import bf.ycognicore.backend.multitenant.TenantContext;
 import bf.ycognicore.backend.service.AuthDispatcherService;
+import bf.ycognicore.backend.service.AuthMfaAwareService;
 import bf.ycognicore.backend.service.RefreshService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -22,18 +23,18 @@ public class AuthController {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
-    private final AuthDispatcherService authDispatcher;
+    private final AuthMfaAwareService authMfaAware;
     private final RefreshService refreshService;
 
-    public AuthController(AuthDispatcherService authDispatcher,
+    public AuthController(AuthMfaAwareService authMfaAware,
                           RefreshService refreshService) {
-        this.authDispatcher = authDispatcher;
+        this.authMfaAware = authMfaAware;
         this.refreshService = refreshService;
     }
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest req) {
-        return ResponseEntity.ok(authDispatcher.authenticate(req));
+        return ResponseEntity.ok(authMfaAware.authenticate(req));
     }
 
     @PostMapping("/refresh")

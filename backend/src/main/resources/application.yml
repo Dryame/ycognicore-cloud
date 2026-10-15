@@ -25,6 +25,8 @@ spring:
     clean-disabled: true
 
 ycc:
+  csrf:
+    enforce: false   # L3.7 : observation, activer apres migration frontend
   vault:
     url: ${VAULT_URL:http://localhost:8200}
     token: ${VAULT_TOKEN}

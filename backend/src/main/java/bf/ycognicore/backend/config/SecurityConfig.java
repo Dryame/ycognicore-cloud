@@ -1,5 +1,6 @@
 package bf.ycognicore.backend.config;
 
+import bf.ycognicore.backend.security.CsrfFilter;
 import bf.ycognicore.backend.security.JwtAuthenticationFilter;
 import bf.ycognicore.backend.security.RateLimitFilter;
 import bf.ycognicore.backend.security.SessionValidatorFilter;
@@ -94,7 +95,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, JwtService jwtService,
                                                 SessionValidatorFilter sessionValidatorFilter,
-                                                RateLimitFilter rateLimitFilter)
+                                                RateLimitFilter rateLimitFilter,
+                                                CsrfFilter csrfFilter)
             throws Exception {
 
         logger.info("Construction SecurityFilterChain BL-011 + CORS");
@@ -125,7 +127,8 @@ public class SecurityConfig {
                 )
                 .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterAfter(sessionValidatorFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class);
+                .addFilterAfter(sessionValidatorFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(csrfFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

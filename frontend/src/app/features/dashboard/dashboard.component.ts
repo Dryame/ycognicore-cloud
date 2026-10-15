@@ -7,16 +7,16 @@ import { AuthService } from '../../core/auth/auth.service';
   template: `
     <div class="dashboard">
       <h2>Tableau de bord</h2>
-      <p>Bienvenue <strong>{{ auth.currentUser?.email }}</strong></p>
+      <p>Bienvenue <strong>{{ auth.currentUser()?.email }}</strong></p>
       <div class="info-grid">
         <div class="info-card">
           <label>Type de profil</label>
-          <span>{{ auth.currentUser?.userType }}</span>
+          <span>{{ auth.currentUser()?.userType }}</span>
         </div>
-        @if (auth.currentUser?.tenantCode) {
+        @if (auth.currentUser()?.tenantCode) {
           <div class="info-card">
             <label>Tenant</label>
-            <span>{{ auth.currentUser?.tenantCode }}</span>
+            <span>{{ auth.currentUser()?.tenantCode }}</span>
           </div>
         }
       </div>

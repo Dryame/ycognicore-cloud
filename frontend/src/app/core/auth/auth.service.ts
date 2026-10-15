@@ -1,68 +1,73 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { LoginRequest, LoginResponse, RefreshResponse, UserInfo } from '../models/login.model';
+import {
+  LoginRequest, LoginResponse, RefreshResponse, UserInfo,
+} from '../models/login.model';
+import { TokenService } from './token.service';
 
+/**
+ * Authentification — D-13 :
+ *  - access token en memoire (TokenService)
+ *  - refresh token en cookie HttpOnly (emis par le backend)
+ *  - withCredentials sur /api/auth/* et /api/mfa/*
+ */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
+  private readonly tokenService = inject(TokenService);
 
-  private readonly currentUser$ = new BehaviorSubject<UserInfo | null>(this.loadUser());
+  private readonly _currentUser = signal<UserInfo | null>(this.loadUser());
 
-  get user$(): Observable<UserInfo | null> {
-    return this.currentUser$.asObservable();
-  }
+  readonly currentUser = this._currentUser.asReadonly();
 
-  get currentUser(): UserInfo | null {
-    return this.currentUser$.value;
-  }
-
-  get accessToken(): string | null {
-    return localStorage.getItem(environment.tokenKey);
-  }
-
-  get refreshToken(): string | null {
-    return localStorage.getItem(environment.refreshKey);
+  getAccessToken(): string | null {
+    return this.tokenService.get();
   }
 
   isAuthenticated(): boolean {
-    return !!this.accessToken && !!this.currentUser;
+    return this.tokenService.has() && this._currentUser() !== null;
   }
 
   login(payload: LoginRequest): Observable<LoginResponse> {
-    return this.http.post<LoginResponse>(`${environment.apiUrl}/api/auth/login`, payload)
-      .pipe(tap(res => this.storeSession(res)));
+    return this.http.post<LoginResponse>(
+      `${environment.apiUrl}/api/auth/login`,
+      payload,
+      { withCredentials: true }
+    );
+  }
+
+  /**
+   * Termine la connexion apres validation MFA (challenge).
+   * Le backend emet access + refresh ; le refresh est pose en cookie HttpOnly.
+   */
+  completeLogin(res: LoginResponse): void {
+    if (res.accessToken) {
+      this.tokenService.set(res.accessToken);
+    }
+    if (res.user) {
+      this._currentUser.set(res.user);
+      localStorage.setItem(environment.userKey, JSON.stringify(res.user));
+    }
   }
 
   refresh(): Observable<RefreshResponse> {
-    const refreshToken = this.refreshToken;
-    const tenantCode = this.currentUser?.tenantCode;
     return this.http.post<RefreshResponse>(
       `${environment.apiUrl}/api/auth/refresh`,
-      { refreshToken },
-      tenantCode ? { headers: { 'X-Tenant-Code': tenantCode } } : {}
-    ).pipe(tap(res => {
-      localStorage.setItem(environment.tokenKey, res.accessToken);
-    }));
+      {},
+      { withCredentials: true }
+    ).pipe(tap(res => this.tokenService.set(res.accessToken)));
   }
 
   logout(): void {
-    localStorage.removeItem(environment.tokenKey);
-    localStorage.removeItem(environment.refreshKey);
+    this.tokenService.clear();
+    this._currentUser.set(null);
     localStorage.removeItem(environment.userKey);
-    this.currentUser$.next(null);
+    // Le cookie refresh est invalide cote serveur via /api/auth/logout (a venir L6)
     this.router.navigate(['/login']);
-  }
-
-  private storeSession(res: LoginResponse): void {
-    localStorage.setItem(environment.tokenKey, res.accessToken);
-    localStorage.setItem(environment.refreshKey, res.refreshToken);
-    localStorage.setItem(environment.userKey, JSON.stringify(res.user));
-    this.currentUser$.next(res.user);
   }
 
   private loadUser(): UserInfo | null {

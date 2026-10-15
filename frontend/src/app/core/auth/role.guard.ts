@@ -5,7 +5,7 @@ import { AuthService } from './auth.service';
 export const roleGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
   const auth = inject(AuthService);
   const router = inject(Router);
-  const user = auth.currentUser;
+  const user = auth.currentUser();   // signal -> appelable
   const allowed = (route.data?.['roles'] as string[] | undefined) ?? [];
 
   if (!user) {

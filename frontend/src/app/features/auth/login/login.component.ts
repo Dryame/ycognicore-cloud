@@ -56,6 +56,11 @@ export class LoginComponent {
     }).subscribe({
       next: (res) => {
         this.isLoading.set(false);
+        if (res.mfaRequired && res.challengeToken) {
+          this.router.navigate(['/mfa'], { state: { challengeToken: res.challengeToken } });
+          return;
+        }
+        this.auth.completeLogin(res);
         this.router.navigate([res.user.redirectUrl || '/']);
       },
       error: (err) => {

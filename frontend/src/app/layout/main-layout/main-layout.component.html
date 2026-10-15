@@ -18,13 +18,13 @@
 
     <div class="header-right">
       <span class="user-info">
-        <span class="user-email">{{ auth.currentUser?.email }}</span>
-        <span class="badge" [attr.aria-label]="'Profil : ' + auth.currentUser?.userType">
-          {{ auth.currentUser?.userType }}
+        <span class="user-email">{{ auth.currentUser()?.email }}</span>
+        <span class="badge" [attr.aria-label]="'Profil : ' + auth.currentUser()?.userType">
+          {{ auth.currentUser()?.userType }}
         </span>
-        @if (auth.currentUser?.tenantCode) {
+        @if (auth.currentUser()?.tenantCode) {
           <span class="tenant" aria-label="Tenant actif">
-            [{{ auth.currentUser?.tenantCode }}]
+            [{{ auth.currentUser()?.tenantCode }}]
           </span>
         }
       </span>

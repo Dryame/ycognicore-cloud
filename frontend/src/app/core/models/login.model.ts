@@ -13,11 +13,13 @@ export interface UserInfo {
 }
 
 export interface LoginResponse {
-  accessToken: string;
-  refreshToken: string;
-  tokenType: string;
+  accessToken: string | null;
+  refreshToken: string | null;
+  tokenType: string | null;
   expiresInSeconds: number;
   user: UserInfo;
+  mfaRequired?: boolean;
+  challengeToken?: string | null;
 }
 
 export interface RefreshResponse {

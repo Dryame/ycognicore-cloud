@@ -8,6 +8,7 @@ export const routes: Routes = [
     loadComponent: () => import('./layout/auth-layout/auth-layout.component').then(m => m.AuthLayoutComponent),
     children: [
       { path: '', loadComponent: () => import('./features/auth/login/login.component').then(m => m.LoginComponent) },
+      { path: 'mfa', loadComponent: () => import('./features/auth/mfa-challenge/mfa-challenge.component').then(m => m.MfaChallengeComponent) },
     ],
   },
   {

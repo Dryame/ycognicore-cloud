@@ -1,19 +1,26 @@
 import { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { AuthService } from '../auth/auth.service';
+import { TokenService } from '../auth/token.service';
 
+/**
+ * Ajoute Authorization: Bearer depuis TokenService (memoire, D-13).
+ * withCredentials pour /api/auth/* et /api/mfa/* (cookie refresh HttpOnly).
+ */
 export const jwtInterceptor: HttpInterceptorFn = (req, next) => {
-  const auth = inject(AuthService);
-  const token = auth.accessToken;
-  const user = auth.currentUser;
+  const tokenService = inject(TokenService);
+  const token = tokenService.get();
 
-  let headers = req.headers;
+  const needsCredentials =
+    req.url.includes('/api/auth/') || req.url.includes('/api/mfa/');
+
+  let cloned = req;
   if (token) {
-    headers = headers.set('Authorization', `Bearer ${token}`);
+    cloned = cloned.clone({
+      setHeaders: { Authorization: `Bearer ${token}` },
+    });
   }
-  if (user?.tenantCode && !headers.has('X-Tenant-Code')) {
-    headers = headers.set('X-Tenant-Code', user.tenantCode);
+  if (needsCredentials && !cloned.withCredentials) {
+    cloned = cloned.clone({ withCredentials: true });
   }
-
-  return next(req.clone({ headers }));
+  return next(cloned);
 };

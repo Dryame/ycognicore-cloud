@@ -1,0 +1,33 @@
+<div class="mfa-container">
+  <h1>Validation MFA</h1>
+  <p>Saisissez le code à 6 chiffres de votre application d'authentification.</p>
+
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+    <label for="code">Code MFA</label>
+    <input
+      id="code"
+      type="text"
+      formControlName="code"
+      inputmode="numeric"
+      autocomplete="one-time-code"
+      maxlength="6"
+      pattern="\d{6}"
+      [attr.aria-invalid]="codeInvalid()"
+      aria-describedby="code-error" />
+
+    @if (codeInvalid()) {
+      <span id="code-error" role="alert">Code à 6 chiffres requis</span>
+    }
+
+    @if (errorMessage()) {
+      <div role="alert" class="error">{{ errorMessage() }}</div>
+    }
+
+    <div class="actions">
+      <button type="button" (click)="cancel()" [disabled]="isLoading()">Annuler</button>
+      <button type="submit" [disabled]="isLoading() || form.invalid">
+        {{ isLoading() ? 'Validation…' : 'Valider' }}
+      </button>
+    </div>
+  </form>
+</div>

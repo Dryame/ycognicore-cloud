@@ -65,35 +65,17 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: |
-          # Le backend va migrer le control plane au boot.
-          # Mais on a besoin d'un schema minimal pour insérer les tenants.
-          # Créer la table tenants minimale avant de lancer le seed
+          # Creer extensions necessaires
           psql -h localhost -U postgres -d ycc_control_plane -c "
             CREATE EXTENSION IF NOT EXISTS citext;
             CREATE EXTENSION IF NOT EXISTS pgcrypto;
-            CREATE TABLE IF NOT EXISTS tenants (
-              id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-              code varchar(50) NOT NULL UNIQUE,
-              nom varchar(255) NOT NULL,
-              email_contact citext NOT NULL,
-              statut varchar(30) NOT NULL DEFAULT 'TRIAL',
-              formule varchar(30) NOT NULL DEFAULT 'TRIAL',
-              date_creation timestamptz NOT NULL DEFAULT now()
-            );
-            CREATE TABLE IF NOT EXISTS tenant_databases (
-              tenant_id uuid PRIMARY KEY REFERENCES tenants(id) ON DELETE CASCADE,
-              db_name varchar(255) NOT NULL UNIQUE,
-              db_host varchar(255) NOT NULL DEFAULT 'localhost',
-              db_port integer NOT NULL DEFAULT 5432,
-              version_schema varchar(20) NOT NULL DEFAULT 'V1',
-              db_status varchar(20) NOT NULL DEFAULT 'EN_COURS',
-              db_user varchar(100) NOT NULL DEFAULT 'postgres',
-              db_secret_ref varchar(255),
-              date_creation timestamptz NOT NULL DEFAULT now(),
-              date_maj timestamptz NOT NULL DEFAULT now(),
-              date_derniere_migration timestamptz
-            );
           "
+          # Appliquer toutes les migrations control-plane dans l'ordre
+          for f in $(ls db/migration/control-plane/V*.sql | sort -V); do
+            echo "-> $f"
+            psql -h localhost -U postgres -d ycc_control_plane -v ON_ERROR_STOP=1 -f "$f" || exit 1
+          done
+          echo "Control plane migre"
 
       - name: Seed demo data
         run: bash scripts/ci-seed-demo.sh

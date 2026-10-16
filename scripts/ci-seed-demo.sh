@@ -51,10 +51,10 @@ fi
 echo
 echo "3. Enregistrement des tenants..."
 psql_cp << 'SQLEOF'
-INSERT INTO tenants (id, code, nom, email_contact, statut, formule)
+INSERT INTO tenants (id, code, nom, email_contact, telephone, adresse, pays, statut, formule)
 VALUES
-  ('11111111-1111-1111-1111-111111111111', 'DEMO001', 'Demo 1 SARL', 'a@b.c', 'TRIAL', 'TRIAL'),
-  ('22222222-2222-2222-2222-222222222222', 'DEMO002', 'Demo 2 SARL', 'a@b.c', 'TRIAL', 'TRIAL')
+  ('11111111-1111-1111-1111-111111111111', 'DEMO001', 'Demo 1 SARL', 'a@b.c', '+226', 'Ouagadougou', 'Burkina Faso', 'TRIAL', 'TRIAL'),
+  ('22222222-2222-2222-2222-222222222222', 'DEMO002', 'Demo 2 SARL', 'a@b.c', '+226', 'Ouagadougou', 'Burkina Faso', 'TRIAL', 'TRIAL')
 ON CONFLICT (code) DO NOTHING;
 
 INSERT INTO tenant_databases (tenant_id, db_name, db_host, db_port, version_schema, db_status, db_user, db_secret_ref)

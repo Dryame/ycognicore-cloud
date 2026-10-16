@@ -47,6 +47,11 @@ export const routes: Routes = [
       { path: '', loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent) },
     ],
   },
+  {
+    path: 'confidentialite',
+    loadComponent: () => import('./features/confidentialite/confidentialite.component')
+      .then(m => m.ConfidentialiteComponent),
+  },
   { path: '', redirectTo: '/login', pathMatch: 'full' },
   { path: '**', redirectTo: '/login' },
 ];

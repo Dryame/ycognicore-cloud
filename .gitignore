@@ -157,3 +157,6 @@ logs/
 # Logs applicatifs (Spring Boot)
 logs/
 *.log
+
+# Base GeoIP (DB-IP Lite, mise a jour mensuelle)
+data/geoip/

@@ -149,3 +149,7 @@ docs/rapports/*.md.backup*
 
 # GeoIP database (MaxMind GeoLite2 — non versionnée, mise à jour mensuelle N-5)
 **/*.mmdb
+
+# Logs applicatifs (Spring Boot)
+logs/
+*.log

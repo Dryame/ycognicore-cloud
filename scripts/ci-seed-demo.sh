@@ -15,10 +15,10 @@ echo "PostgreSQL : $PG_USER@$PG_HOST:$PG_PORT"
 echo
 
 # Helper psql
-psql_cp() { PGPASSWORD="$PG_PASS" psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$CP_DB" "$@"; }
+psql_cp() { PGPASSWORD="$PG_PASS" psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$CP_DB" -v ON_ERROR_STOP=1 "$@"; }
 psql_tenant() {
   local db="$1"; shift
-  PGPASSWORD="$PG_PASS" psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$db" "$@"
+  PGPASSWORD="$PG_PASS" psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$db" -v ON_ERROR_STOP=1 "$@"
 }
 
 # =====================================================================
@@ -82,7 +82,7 @@ done
 # 5. Hash BCrypt pre-calcule pour les users demo
 # =====================================================================
 # Test@2026! en BCrypt 12
-HASH_COMMERCIAL='$2b$12$n8aKqIPAU6u/D.9O5H1EDu3pR8YQZ7oPqZ5qxL0Y6tL8jK5xL0Y6t'
+HASH_COMMERCIAL='$2b$12$n8aKqIPAU6u/D.9O5TEdTuLwDkVBDvO7RMDiV03rlR8DVTUfagx5U2'
 HASH_ADMIN='$2b$12$ECPqOGSXxaJ3kVfU/.IIO.yBeHm1xQfNsB5FVPQgm1Z8Jlqr8W5dG'
 
 # =====================================================================
@@ -100,6 +100,16 @@ ON CONFLICT (email) DO UPDATE
 SET mot_de_passe_hash = EXCLUDED.mot_de_passe_hash;
 SQLEOF
   echo "   $db : users inseres"
+done
+
+echo
+echo
+echo "=== Verification seed ==="
+psql_cp -c "SELECT code, statut FROM tenants ORDER BY code;"
+psql_cp -c "SELECT db_name, db_status FROM tenant_databases ORDER BY db_name;"
+for db in ycc_tenant_demo001 ycc_tenant_demo002; do
+  echo "--- $db users ---"
+  psql_tenant "$db" -c "SELECT email, statut FROM users WHERE email LIKE '%demo001%' OR email LIKE '%demo002%';"
 done
 
 echo

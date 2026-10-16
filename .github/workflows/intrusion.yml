@@ -104,6 +104,12 @@ jobs:
           done
           curl -s http://localhost:8080/actuator/health
 
+      - name: Show backend log if start failed
+        if: failure()
+        run: |
+          echo "=== tail backend.log ==="
+          tail -80 /tmp/backend.log || echo "No log"
+
       - name: Tests d'intrusion
         run: bash docs/h2/tests-intrusion/run-tests.sh
 

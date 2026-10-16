@@ -12,6 +12,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.HexFormat;
 import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -122,6 +123,81 @@ public class DeviceService {
         if (s == null) return null;
         return s.length() > max ? s.substring(0, max) : s;
     }
+
+
+    /** Liste les appareils d'un utilisateur (console). */
+    public List<DeviceRow> listForUser(String tenantCode, UUID userId) {
+        String sql = """
+            SELECT id, user_id, navigateur, empreinte, statut,
+                   premiere_vue, derniere_vue
+              FROM appareils
+             WHERE user_id = ?
+             ORDER BY derniere_vue DESC
+            """;
+        return queryDevices(tenantCode, sql, ps -> ps.setObject(1, userId));
+    }
+
+    /** Liste tous les appareils du tenant (console). */
+    public List<DeviceRow> listByTenant(String tenantCode) {
+        String sql = """
+            SELECT id, user_id, navigateur, empreinte, statut,
+                   premiere_vue, derniere_vue
+              FROM appareils
+             ORDER BY derniere_vue DESC
+             LIMIT 500
+            """;
+        return queryDevices(tenantCode, sql, ps -> {});
+    }
+
+    /** Reactive un appareil (statut BLOQUE -> AUTORISE). */
+    public void unblock(String tenantCode, UUID deviceId) {
+        try (Connection conn = connectionProvider.getConnection(tenantCode);
+             PreparedStatement ps = conn.prepareStatement(
+                 "UPDATE appareils SET statut='AUTORISE' WHERE id=? AND statut='BLOQUE'")) {
+            ps.setObject(1, deviceId);
+            if (ps.executeUpdate() == 0) {
+                throw new IllegalArgumentException(
+                    "Appareil introuvable ou non bloque");
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Reactivation appareil echouee", e);
+        }
+    }
+
+    @FunctionalInterface
+    private interface PsSetter { void apply(PreparedStatement ps) throws Exception; }
+
+    private List<DeviceRow> queryDevices(String tenantCode, String sql, PsSetter setter) {
+        List<DeviceRow> rows = new java.util.ArrayList<>();
+        try (Connection conn = connectionProvider.getConnection(tenantCode);
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            setter.apply(ps);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    rows.add(new DeviceRow(
+                        (UUID) rs.getObject("id"),
+                        (UUID) rs.getObject("user_id"),
+                        rs.getString("navigateur"),
+                        rs.getString("empreinte"),
+                        rs.getString("statut"),
+                        rs.getObject("premiere_vue", java.time.OffsetDateTime.class),
+                        rs.getObject("derniere_vue", java.time.OffsetDateTime.class)
+                    ));
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Lecture appareils echouee : {}", e.getMessage());
+        }
+        return rows;
+    }
+
+    /** Vue console d'un appareil. */
+    public record DeviceRow(
+        UUID id, UUID userId, String navigateur, String empreinte,
+        String statut,
+        java.time.OffsetDateTime premiereVue,
+        java.time.OffsetDateTime derniereVue
+    ) {}
 
     public static class DeviceBlockedException extends RuntimeException {
         public DeviceBlockedException(String message) { super(message); }

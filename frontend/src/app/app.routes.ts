@@ -52,6 +52,19 @@ export const routes: Routes = [
     loadComponent: () => import('./features/confidentialite/confidentialite.component')
       .then(m => m.ConfidentialiteComponent),
   },
+  {
+    path: 'console-securite',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/console-securite/console-securite.component')
+      .then(m => m.ConsoleSecuriteComponent),
+  },
+  {
+    path: 'plateforme/securite',
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['SUPERADMIN'] },
+    loadComponent: () => import('./features/platform/platform.component')
+      .then(m => m.PlatformComponent),
+  },
   { path: '', redirectTo: '/login', pathMatch: 'full' },
   { path: '**', redirectTo: '/login' },
 ];

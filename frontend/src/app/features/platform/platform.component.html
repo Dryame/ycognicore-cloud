@@ -1,0 +1,46 @@
+<section class="platform">
+  <header>
+    <h1>Vue plateforme — Sécurité</h1>
+    <p class="sous-titre">Événements agrégés, toutes entreprises. Aucune donnée métier.</p>
+  </header>
+
+  <div class="filtres">
+    <label>Gravité
+      <select [(ngModel)]="filtreGravite" (change)="reload()">
+        <option value="">Toutes</option>
+        <option value="INFO">INFO</option>
+        <option value="WARN">WARN</option>
+        <option value="ERROR">ERROR</option>
+        <option value="CRITIQUE">CRITIQUE</option>
+      </select>
+    </label>
+    <label>Tenant
+      <input [(ngModel)]="filtreTenant" (change)="reload()" placeholder="ex. ycc_tenant_demo001" />
+    </label>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Entreprise</th>
+        <th>Type</th>
+        <th>Gravité</th>
+        <th>Traité</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (e of events(); track e.id) {
+        <tr>
+          <td>{{ e.dateEvenement | date:'short' }}</td>
+          <td>{{ e.tenantDbName }}</td>
+          <td>{{ e.type }}</td>
+          <td class="gravite-{{ e.gravite }}">{{ e.gravite }}</td>
+          <td>{{ e.traite ? 'Oui' : 'Non' }}</td>
+        </tr>
+      } @empty {
+        <tr><td colspan="5">Aucun événement</td></tr>
+      }
+    </tbody>
+  </table>
+</section>

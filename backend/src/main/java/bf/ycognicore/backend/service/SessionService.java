@@ -12,6 +12,7 @@ import java.sql.ResultSet;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.UUID;
 
 /**
@@ -199,6 +200,72 @@ public class SessionService {
     private static String redisKey(String tenantCode, UUID sessionId) {
         return KEY_PREFIX + tenantCode + ":" + sessionId;
     }
+
+
+    /** Liste les sessions actives d'un utilisateur (console). */
+    public List<SessionRow> listForUser(String tenantCode, UUID userId) {
+        String sql = """
+            SELECT id, user_id, appareil_id, ip::text, user_agent,
+                   date_ouverture, date_derniere_activite, date_expiration,
+                   statut, motif_fermeture
+              FROM sessions_actives
+             WHERE user_id = ?
+             ORDER BY date_ouverture DESC
+            """;
+        return querySessions(tenantCode, sql, ps -> ps.setObject(1, userId));
+    }
+
+    /** Liste toutes les sessions actives du tenant (console). */
+    public List<SessionRow> listByTenant(String tenantCode) {
+        String sql = """
+            SELECT id, user_id, appareil_id, ip::text, user_agent,
+                   date_ouverture, date_derniere_activite, date_expiration,
+                   statut, motif_fermeture
+              FROM sessions_actives
+             WHERE statut = 'ACTIVE'
+             ORDER BY date_ouverture DESC
+             LIMIT 500
+            """;
+        return querySessions(tenantCode, sql, ps -> {});
+    }
+
+    @FunctionalInterface
+    private interface PsSetter { void apply(PreparedStatement ps) throws Exception; }
+
+    private List<SessionRow> querySessions(String tenantCode, String sql, PsSetter setter) {
+        List<SessionRow> rows = new ArrayList<>();
+        try (Connection conn = connectionProvider.getConnection(tenantCode);
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            setter.apply(ps);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    rows.add(new SessionRow(
+                        (UUID) rs.getObject("id"),
+                        (UUID) rs.getObject("user_id"),
+                        (UUID) rs.getObject("appareil_id"),
+                        rs.getString("ip"),
+                        rs.getString("user_agent"),
+                        rs.getObject("date_ouverture", OffsetDateTime.class),
+                        rs.getObject("date_derniere_activite", OffsetDateTime.class),
+                        rs.getObject("date_expiration", OffsetDateTime.class),
+                        rs.getString("statut"),
+                        rs.getString("motif_fermeture")
+                    ));
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Lecture sessions echouee : {}", e.getMessage());
+        }
+        return rows;
+    }
+
+    /** Vue console d'une session. */
+    public record SessionRow(
+        UUID id, UUID userId, UUID appareilId,
+        String ip, String userAgent,
+        OffsetDateTime dateOuverture, OffsetDateTime dateDerniereActivite,
+        OffsetDateTime dateExpiration, String statut, String motifFermeture
+    ) {}
 
     public static class SessionException extends RuntimeException {
         public SessionException(String m) { super(m); }

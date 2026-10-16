@@ -69,6 +69,8 @@ jobs:
           # Mais on a besoin d'un schema minimal pour insérer les tenants.
           # Créer la table tenants minimale avant de lancer le seed
           psql -h localhost -U postgres -d ycc_control_plane -c "
+            CREATE EXTENSION IF NOT EXISTS citext;
+            CREATE EXTENSION IF NOT EXISTS pgcrypto;
             CREATE TABLE IF NOT EXISTS tenants (
               id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
               code varchar(50) NOT NULL UNIQUE,

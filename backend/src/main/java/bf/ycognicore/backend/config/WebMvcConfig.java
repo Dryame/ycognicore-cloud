@@ -1,5 +1,6 @@
 package bf.ycognicore.backend.config;
 
+import bf.ycognicore.backend.security.DroitSpecialInterceptor;
 import bf.ycognicore.backend.security.RbacInterceptor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -13,9 +14,12 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class WebMvcConfig implements WebMvcConfigurer {
 
     private final RbacInterceptor rbacInterceptor;
+    private final DroitSpecialInterceptor droitSpecialInterceptor;
 
-    public WebMvcConfig(RbacInterceptor rbacInterceptor) {
+    public WebMvcConfig(RbacInterceptor rbacInterceptor,
+                       DroitSpecialInterceptor droitSpecialInterceptor) {
         this.rbacInterceptor = rbacInterceptor;
+        this.droitSpecialInterceptor = droitSpecialInterceptor;
     }
 
     @Override
@@ -27,5 +31,6 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/api/_poc/**",
                                     "/error"
                 );
+        registry.addInterceptor(droitSpecialInterceptor);
     }
 }

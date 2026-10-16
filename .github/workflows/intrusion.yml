@@ -61,6 +61,41 @@ jobs:
           sleep 5
           curl -s -o /dev/null -w "Vault: %{http_code}\n" http://localhost:8200/v1/sys/health
 
+      - name: Init control plane (migrations)
+        env:
+          PGPASSWORD: postgres
+        run: |
+          # Le backend va migrer le control plane au boot.
+          # Mais on a besoin d'un schema minimal pour insérer les tenants.
+          # Créer la table tenants minimale avant de lancer le seed
+          psql -h localhost -U postgres -d ycc_control_plane -c "
+            CREATE TABLE IF NOT EXISTS tenants (
+              id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+              code varchar(50) NOT NULL UNIQUE,
+              nom varchar(255) NOT NULL,
+              email_contact citext NOT NULL,
+              statut varchar(30) NOT NULL DEFAULT 'TRIAL',
+              formule varchar(30) NOT NULL DEFAULT 'TRIAL',
+              date_creation timestamptz NOT NULL DEFAULT now()
+            );
+            CREATE TABLE IF NOT EXISTS tenant_databases (
+              tenant_id uuid PRIMARY KEY REFERENCES tenants(id) ON DELETE CASCADE,
+              db_name varchar(255) NOT NULL UNIQUE,
+              db_host varchar(255) NOT NULL DEFAULT 'localhost',
+              db_port integer NOT NULL DEFAULT 5432,
+              version_schema varchar(20) NOT NULL DEFAULT 'V1',
+              db_status varchar(20) NOT NULL DEFAULT 'EN_COURS',
+              db_user varchar(100) NOT NULL DEFAULT 'postgres',
+              db_secret_ref varchar(255),
+              date_creation timestamptz NOT NULL DEFAULT now(),
+              date_maj timestamptz NOT NULL DEFAULT now(),
+              date_derniere_migration timestamptz
+            );
+          "
+
+      - name: Seed demo data
+        run: bash scripts/ci-seed-demo.sh
+
       - name: Start backend
         env:
           SPRING_PROFILES_ACTIVE: dev
@@ -69,18 +104,21 @@ jobs:
           DB_PASSWORD: postgres
           VAULT_URL: http://localhost:8200
           VAULT_TOKEN: ycc-dev-token
-          JWT_SECRET: ${{ secrets.CI_JWT_SECRET || 'ci-secret-key-must-be-64-bytes-minimum-for-hs512-signing-xxxxxxxxxxxxxxxxx' }}
+          JWT_SECRET: ci-secret-key-must-be-64-bytes-minimum-for-hs512-signing-xxxxxxxxxxxxxxxxx
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
         run: |
           cd backend
           nohup java -jar target/*.jar > /tmp/backend.log 2>&1 &
           echo "Backend PID: $!"
           for i in $(seq 1 60); do
-            if curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/actuator/health | grep -q "200"; then
+            if curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/actuator/health 2>/dev/null | grep -q "200"; then
               echo "✓ Backend démarré en $((i*2))s"
               break
             fi
             sleep 2
           done
+          curl -s http://localhost:8080/actuator/health
 
       - name: Tests d'intrusion
         run: bash docs/h2/tests-intrusion/run-tests.sh
@@ -90,5 +128,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: backend-intrusion-logs
-          path: /tmp/backend.log
+          path: |
+            /tmp/backend.log
           retention-days: 7

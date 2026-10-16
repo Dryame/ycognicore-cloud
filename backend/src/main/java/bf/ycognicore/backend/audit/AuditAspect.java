@@ -80,7 +80,7 @@ public class AuditAspect {
         var attrs = RequestContextHolder.getRequestAttributes();
         if (attrs instanceof ServletRequestAttributes sra) {
             HttpServletRequest req = sra.getRequest();
-            ip = req.getRemoteAddr();
+            ip = extractRealIp(req);
             userAgent = req.getHeader("User-Agent");
             if (userAgent != null && userAgent.length() > 250) {
                 userAgent = userAgent.substring(0, 250);
@@ -100,5 +100,18 @@ public class AuditAspect {
             entiteId, auditable.module(), auditable.niveau(), succes,
             ip, userAgent, details, OffsetDateTime.now()
         );
+    }
+
+    /** Extrait l'IP reelle derriere un reverse proxy (T3.7). */
+    private static String extractRealIp(HttpServletRequest req) {
+        String xff = req.getHeader("X-Forwarded-For");
+        if (xff != null && !xff.isBlank()) {
+            return xff.split(",")[0].trim();
+        }
+        String xri = req.getHeader("X-Real-IP");
+        if (xri != null && !xri.isBlank()) {
+            return xri.trim();
+        }
+        return req.getRemoteAddr();
     }
 }

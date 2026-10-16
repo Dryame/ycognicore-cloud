@@ -25,6 +25,17 @@ spring:
     clean-disabled: true
 
 ycc:
+  security:
+    hsts-max-age: 31536000
+    frame-options: DENY
+    referrer-policy: strict-origin-when-cross-origin
+    csp: "default-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'"
+    cors:
+      allowed-origins: "http://localhost:4200,http://127.0.0.1:4200"
+      allowed-methods: "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+      allowed-headers: "Authorization,Content-Type,X-XSRF-TOKEN,X-Tenant-Code"
+      allow-credentials: true
+      max-age: 3600
   csrf:
     enforce: false   # L3.7 : observation, activer apres migration frontend
   vault:

@@ -3,6 +3,7 @@ package bf.ycognicore.backend.config;
 import bf.ycognicore.backend.security.CsrfFilter;
 import bf.ycognicore.backend.security.JwtAuthenticationFilter;
 import bf.ycognicore.backend.security.RateLimitFilter;
+import bf.ycognicore.backend.security.SecurityHeadersFilter;
 import bf.ycognicore.backend.security.SessionValidatorFilter;
 import bf.ycognicore.backend.service.JwtService;
 import jakarta.annotation.PostConstruct;
@@ -45,13 +46,13 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder(12);
     }
 
+        @org.springframework.beans.factory.annotation.Value("${ycc.security.cors.allowed-origins}")
+    private String corsAllowedOrigins;
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of(
-                "http://localhost:4200",
-                "http://127.0.0.1:4200"
-        ));
+        config.setAllowedOrigins(List.of(corsAllowedOrigins.split(",")));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setExposedHeaders(List.of("Authorization"));
@@ -94,6 +95,7 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, JwtService jwtService,
+                                       SecurityHeadersFilter securityHeadersFilter,
                                                 SessionValidatorFilter sessionValidatorFilter,
                                                 RateLimitFilter rateLimitFilter,
                                                 CsrfFilter csrfFilter)
@@ -125,6 +127,7 @@ public class SecurityConfig {
                         .requestMatchers(prefix("/error")).permitAll()
                         .anyRequest().authenticated()
                 )
+                .addFilterBefore(securityHeadersFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(sessionValidatorFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)

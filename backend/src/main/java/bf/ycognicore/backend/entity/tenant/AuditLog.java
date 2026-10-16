@@ -71,6 +71,12 @@ public class AuditLog {
     @Column(name = "details", columnDefinition = "jsonb")
     private JsonNode details;
 
+    @Column(name = "hash_precedent", length = 64)
+    private String hashPrecedent;
+
+    @Column(name = "hash_entree", length = 64)
+    private String hashEntree;
+
     public AuditLog() {}
 
     public Long getId() { return id; }
@@ -103,4 +109,9 @@ public class AuditLog {
     public void setApres(JsonNode v) { this.apres = v; }
     public JsonNode getDetails() { return details; }
     public void setDetails(JsonNode v) { this.details = v; }
+
+    public String getHashPrecedent() { return hashPrecedent; }
+    public void setHashPrecedent(String v) { this.hashPrecedent = v; }
+    public String getHashEntree() { return hashEntree; }
+    public void setHashEntree(String v) { this.hashEntree = v; }
 }

@@ -153,3 +153,7 @@ docs/rapports/*.md.backup*
 # Logs applicatifs (Spring Boot)
 logs/
 *.log
+
+# Logs applicatifs (Spring Boot)
+logs/
+*.log

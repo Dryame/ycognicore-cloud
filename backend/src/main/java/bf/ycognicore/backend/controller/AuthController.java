@@ -35,24 +35,79 @@ public class AuthController {
     private final UserRepository userRepository;
     private final SessionService sessionService;
     private final TokenService tokenService;
+    private final bf.ycognicore.backend.service.DeviceService deviceService;
 
     public AuthController(AuthMfaAwareService authMfaAware,
                            RefreshService refreshService,
                            PasswordEncoder passwordEncoder,
                            UserRepository userRepository,
                            SessionService sessionService,
-                           TokenService tokenService) {
+                           TokenService tokenService,
+                           bf.ycognicore.backend.service.DeviceService deviceService) {
         this.authMfaAware = authMfaAware;
         this.refreshService = refreshService;
         this.passwordEncoder = passwordEncoder;
         this.userRepository = userRepository;
         this.sessionService = sessionService;
         this.tokenService = tokenService;
+        this.deviceService = deviceService;
     }
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest req) {
-        return ResponseEntity.ok(authMfaAware.authenticate(req));
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest req,
+                                               jakarta.servlet.http.HttpServletRequest httpReq) {
+        LoginResponse response = authMfaAware.authenticate(req);
+
+        // MFA requis : pas de session tant que MFA non validee
+        if (Boolean.TRUE.equals(response.mfaRequired())) {
+            return ResponseEntity.ok(response);
+        }
+
+        String tenantCode = req.tenantCode();
+        if (tenantCode == null || tenantCode.isBlank()) {
+            // Superadmin : pas de session (fallback)
+            return ResponseEntity.ok(response);
+        }
+
+        try {
+            UUID userId = UUID.fromString(response.user().userId());
+            String ip = extractRealIp(httpReq);
+            String userAgent = httpReq.getHeader("User-Agent");
+            String acceptLang = httpReq.getHeader("Accept-Language");
+
+            // Appareil : resolveOrCreate
+            UUID appareilId = deviceService.resolveOrCreate(
+                tenantCode, userId, userAgent, acceptLang, ip);
+
+            // Creer la session avec le refresh placeholder
+            UUID sessionId = sessionService.create(tenantCode, userId, ip,
+                userAgent, appareilId, response.refreshToken());
+
+            // Regenerer access + refresh avec jti = sessionId
+            String newAccess = tokenService.generateAccessToken(userId,
+                response.user().email(), response.user().userType(), tenantCode,
+                java.util.List.of(response.user().userType()), sessionId);
+            String newRefresh = tokenService.generateRefreshToken(userId, sessionId);
+
+            // Rotation : remplacer le hash placeholder par le vrai
+            sessionService.rotateRefresh(tenantCode, sessionId, newRefresh);
+
+            return ResponseEntity.ok(new LoginResponse(
+                newAccess, newRefresh, "Bearer", 1800L, response.user(), false, null));
+
+        } catch (Exception e) {
+            logger.warn("Creation session apres login echouee : {}", e.getMessage());
+            // Fail-soft : on retourne la reponse initiale (tokens sans jti)
+            return ResponseEntity.ok(response);
+        }
+    }
+
+    private static String extractRealIp(jakarta.servlet.http.HttpServletRequest req) {
+        String xff = req.getHeader("X-Forwarded-For");
+        if (xff != null && !xff.isBlank()) {
+            return xff.split(",")[0].trim();
+        }
+        return req.getRemoteAddr();
     }
 
     @PostMapping("/refresh")

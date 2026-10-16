@@ -5,7 +5,7 @@
 set -euo pipefail
 
 API="${API:-http://localhost:8080}"
-TENANT="demo001"
+TENANT="DEMO001"
 EMAIL="${EMAIL:-admin@demo001.bf}"
 PASSWORD="${PASSWORD:-AdminDemo2026!}"
 COOKIE_JAR="$(mktemp)"
@@ -100,16 +100,56 @@ echo "$CODES" | grep -q '429' && ok "429 present — RateLimitFilter actif" \
 echo
 
 # ---------------------------------------------------------------
-color "6. Rejeu d'un refresh token deja consomme"
-if [[ -f "$COOKIE_JAR" ]]; then
-  R1="$(curl -sS -b "$COOKIE_JAR" -c "$COOKIE_JAR" -X POST "$API/api/auth/refresh" \
-    -H 'Content-Type: application/json' -o /dev/null -w '%{http_code}')"
-  R2="$(curl -sS -b "$COOKIE_JAR" -c "$COOKIE_JAR" -X POST "$API/api/auth/refresh" \
-    -H 'Content-Type: application/json' -o /dev/null -w '%{http_code}')"
-  echo "  1er refresh : $R1   2e refresh (rejeu) : $R2"
-  [[ "$R2" == "401" ]] && ok "Rejeu refuse — rotation active" \
-                       || ko "Rejeu accepte — verifier RefreshService"
+echo
+color "   Attente 65s pour reinitialiser le quota rate limit..."
+sleep 65
+echo
+
+color "6. Rotation du refresh token (D-13 : usage unique)"
+
+# Re-login pour obtenir un refresh tout neuf
+LOGIN2_JSON="$(mktemp)"
+curl -sS -c "$COOKIE_JAR" -X POST "$API/api/auth/login" \
+  -H 'Content-Type: application/json' \
+  -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\",\"tenantCode\":\"$TENANT\"}" \
+  -o "$LOGIN2_JSON"
+
+REFRESH_OLD="$(jq -r '.refreshToken // empty' "$LOGIN2_JSON")"
+if [[ -z "$REFRESH_OLD" ]]; then
+  ko "Pas de refresh token dans la reponse login"
+else
+  # 1er usage : doit reussir (200)
+  R1_JSON="$(mktemp)"
+  R1_CODE="$(curl -sS -b "$COOKIE_JAR" -c "$COOKIE_JAR" -X POST "$API/api/auth/refresh" \
+    -H 'Content-Type: application/json' \
+    -H "X-Tenant-Code: $TENANT" \
+    -H "X-Tenant-Code: $TENANT" \
+    -d "{\"refreshToken\":\"$REFRESH_OLD\"}" \
+    -o "$R1_JSON" -w '%{http_code}')"
+  REFRESH_NEW="$(jq -r '.refreshToken // empty' "$R1_JSON" 2>/dev/null)"
+
+  # 2e usage avec l'ANCIEN token : rejeu -> doit refuser
+  R2_CODE="$(curl -sS -b "$COOKIE_JAR" -X POST "$API/api/auth/refresh" \
+    -H 'Content-Type: application/json' \
+    -H "X-Tenant-Code: $TENANT" \
+    -H "X-Tenant-Code: $TENANT" \
+    -d "{\"refreshToken\":\"$REFRESH_OLD\"}" \
+    -o /dev/null -w '%{http_code}')"
+
+  echo "  1er refresh (valide) : $R1_CODE   rotation OK : $([[ -n "$REFRESH_NEW" ]] && echo oui || echo non)"
+  echo "  2e refresh (rejeu)   : $R2_CODE"
+
+  if [[ "$R1_CODE" == "200" && "$R2_CODE" == "401" ]]; then
+    ok "Rotation + rejeu refuse — D-13 effectif"
+  elif [[ "$R1_CODE" != "200" ]]; then
+    ko "1er refresh refuse ($R1_CODE) — verifier RefreshService"
+  elif [[ "$R2_CODE" != "401" ]]; then
+    ko "Rejeu accepte ($R2_CODE) — rotation non effective"
+  fi
+
+  rm -f "$R1_JSON"
 fi
+rm -f "$LOGIN2_JSON"
 echo
 
 color "=== FIN DE DEMONSTRATION ==="

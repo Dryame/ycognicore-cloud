@@ -21,13 +21,19 @@ public class RefreshService {
     private static final Logger logger = LoggerFactory.getLogger(RefreshService.class);
 
     private final JwtService jwtService;
+    private final SessionService sessionService;
+    private final TokenService tokenService;
     private final SuperadminUserRepository superadminRepo;
     private final UserRepository userRepo;
 
     public RefreshService(JwtService jwtService,
                           SuperadminUserRepository superadminRepo,
-                          UserRepository userRepo) {
+                          UserRepository userRepo,
+                          SessionService sessionService,
+                          TokenService tokenService) {
         this.jwtService = jwtService;
+        this.sessionService = sessionService;
+        this.tokenService = tokenService;
         this.superadminRepo = superadminRepo;
         this.userRepo = userRepo;
     }
@@ -56,7 +62,40 @@ public class RefreshService {
         if (tenantCode == null || tenantCode.isBlank()) {
             return refreshSuperadmin(userUuid);
         }
-        return refreshTenantUser(userUuid, tenantCode);
+
+        // --- Tenant : rotation D-13 ---
+        String jti = claims.getId();
+        if (jti == null || !jti.contains(":")) {
+            throw new BadCredentialsException("Refresh token sans jti");
+        }
+        UUID sessionId;
+        try {
+            sessionId = UUID.fromString(jti.substring(0, jti.indexOf(':')));
+        } catch (Exception e) {
+            throw new BadCredentialsException("jti invalide");
+        }
+
+        String storedHash = sessionService.isActiveAndRefreshHash(tenantCode, sessionId);
+        if (storedHash == null) {
+            throw new BadCredentialsException("Session expiree ou revoquee");
+        }
+        String presentedHash = tokenService.hashToken(refreshToken);
+        if (!storedHash.equals(presentedHash)) {
+            throw new BadCredentialsException("Refresh token deja utilise (rejeu)");
+        }
+
+        // Rotation : nouveau refresh
+        String newRefresh = tokenService.generateRefreshToken(userUuid, sessionId);
+        sessionService.rotateRefresh(tenantCode, sessionId, newRefresh);
+
+        // Reconstruire access token (roles = userType)
+        var user = userRepo.findById(userUuid).orElse(null);
+        String email = user != null ? user.getEmail() : null;
+        String userType = user != null ? user.getTypeUtilisateur() : "INTERNE";
+        String newAccess = tokenService.generateAccessToken(userUuid,
+            email, userType, tenantCode, java.util.List.of(userType), sessionId);
+
+        return new RefreshResponse(newAccess, "Bearer", 1800L, newRefresh);
     }
 
     private RefreshResponse refreshSuperadmin(UUID userId) {

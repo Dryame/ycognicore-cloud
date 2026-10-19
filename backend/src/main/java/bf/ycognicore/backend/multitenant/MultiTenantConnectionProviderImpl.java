@@ -30,7 +30,6 @@ public class MultiTenantConnectionProviderImpl
     private static final Logger logger = LoggerFactory.getLogger(MultiTenantConnectionProviderImpl.class);
 
     private final TenantLookupService tenantLookupService;
-    private final String dbUser;
     private final String dbPassword;
     private final int poolMaxSize;
     private final int poolMinIdle;
@@ -50,7 +49,6 @@ public class MultiTenantConnectionProviderImpl
             @Value("${ycc.multitenant.tenant-pool.max-lifetime-ms:900000}") long maxLifetimeMs
     ) {
         this.tenantLookupService = tenantLookupService;
-        this.dbUser = "postgres";
         this.dbPassword = dbPassword;
         this.poolMaxSize = poolMaxSize;
         this.poolMinIdle = poolMinIdle;
@@ -76,7 +74,16 @@ public class MultiTenantConnectionProviderImpl
 
             HikariConfig hc = new HikariConfig();
             hc.setJdbcUrl(cfg.jdbcUrl());
-            hc.setUsername(dbUser);
+            String effectiveUser = (cfg.dbUser() != null && !cfg.dbUser().isBlank())
+                ? cfg.dbUser()
+                : "postgres";
+            if ("postgres".equals(effectiveUser)) {
+                logger.warn("C40 : tenant {} utilise 'postgres' (superuser). " +
+                    "Configurer db_user=ycc_tenant_app dans tenant_databases.", tenantId);
+            } else {
+                logger.debug("Pool tenant={} user={} (RBAC strict)", tenantId, effectiveUser);
+            }
+            hc.setUsername(effectiveUser);
             hc.setPassword(dbPassword);
             hc.setPoolName("tenant-" + tenantId);
             hc.setMaximumPoolSize(poolMaxSize);

@@ -41,6 +41,7 @@ ycc:
   csrf:
     enforce: false   # L3.7 : observation, activer apres migration frontend
   vault:
+    mode: ${YCC_VAULT_MODE:dev}
     url: ${VAULT_URL:http://localhost:8200}
     token: ${VAULT_TOKEN}
     transit-key: ycc-mfa-key
@@ -76,6 +77,9 @@ logging:
     org.hibernate.SQL: WARN
 
 server:
+  tomcat:
+    mbeanregistry:
+      enabled: true
   port: 8080
   address: 0.0.0.0
 

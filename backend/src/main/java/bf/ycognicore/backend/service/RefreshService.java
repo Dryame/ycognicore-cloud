@@ -5,6 +5,7 @@ import bf.ycognicore.backend.entity.controlplane.SuperadminUser;
 import bf.ycognicore.backend.entity.tenant.User;
 import bf.ycognicore.backend.multitenant.TenantContext;
 import bf.ycognicore.backend.repository.controlplane.SuperadminUserRepository;
+import bf.ycognicore.backend.repository.controlplane.TenantRepository;
 import bf.ycognicore.backend.repository.tenant.UserRepository;
 import io.jsonwebtoken.Claims;
 import org.slf4j.Logger;
@@ -17,7 +18,6 @@ import java.util.UUID;
 
 @Service
 public class RefreshService {
-
     private static final Logger logger = LoggerFactory.getLogger(RefreshService.class);
 
     private final JwtService jwtService;
@@ -25,17 +25,23 @@ public class RefreshService {
     private final TokenService tokenService;
     private final SuperadminUserRepository superadminRepo;
     private final UserRepository userRepo;
+    private final UserService userService;
+    private final TenantRepository tenantRepository;
 
     public RefreshService(JwtService jwtService,
                           SuperadminUserRepository superadminRepo,
                           UserRepository userRepo,
                           SessionService sessionService,
-                          TokenService tokenService) {
+                          TokenService tokenService,
+                          UserService userService,
+                          TenantRepository tenantRepository) {
         this.jwtService = jwtService;
         this.sessionService = sessionService;
         this.tokenService = tokenService;
         this.superadminRepo = superadminRepo;
         this.userRepo = userRepo;
+        this.userService = userService;
+        this.tenantRepository = tenantRepository;
     }
 
     public RefreshResponse refresh(String refreshToken) {
@@ -63,7 +69,6 @@ public class RefreshService {
             return refreshSuperadmin(userUuid);
         }
 
-        // --- Tenant : rotation D-13 ---
         String jti = claims.getId();
         if (jti == null || !jti.contains(":")) {
             throw new BadCredentialsException("Refresh token sans jti");
@@ -84,16 +89,22 @@ public class RefreshService {
             throw new BadCredentialsException("Refresh token deja utilise (rejeu)");
         }
 
-        // Rotation : nouveau refresh
         String newRefresh = tokenService.generateRefreshToken(userUuid, sessionId);
         sessionService.rotateRefresh(tenantCode, sessionId, newRefresh);
 
-        // Reconstruire access token (roles = userType)
-        var user = userRepo.findById(userUuid).orElse(null);
-        String email = user != null ? user.getEmail() : null;
-        String userType = user != null ? user.getTypeUtilisateur() : "INTERNE";
-        String newAccess = tokenService.generateAccessToken(userUuid,
-            email, userType, tenantCode, java.util.List.of(userType), sessionId);
+        UUID tenantId = tenantRepository.findByCode(tenantCode.trim().toUpperCase()).orElseThrow().getId();
+        
+        User user = userRepo.findById(userUuid).orElse(null);
+        if (user == null) {
+            throw new BadCredentialsException("Utilisateur introuvable");
+        }
+        
+        // Déchiffrement pour récupérer l'email en clair dans le token
+        user = userService.decryptForDisplay(user, tenantId);
+
+        String email = user.getEmail();
+        String userType = user.getTypeUtilisateur();
+        String newAccess = tokenService.generateAccessToken(userUuid, email, userType, tenantCode, List.of(userType), sessionId);
 
         return new RefreshResponse(newAccess, "Bearer", 1800L, newRefresh);
     }
@@ -111,24 +122,6 @@ public class RefreshService {
                 List.of("ROLE_SUPERADMIN"));
 
         logger.info("Refresh SUPERADMIN OK pour {}", sa.getEmail());
-        return new RefreshResponse(access, "Bearer", jwtService.getAccessTtlSeconds());
-    }
-
-    private RefreshResponse refreshTenantUser(UUID userId, String tenantCode) {
-        User user = userRepo.findById(userId)
-                .orElseThrow(() -> new BadCredentialsException("Utilisateur introuvable"));
-
-        if (!"ACTIF".equals(user.getStatut())) {
-            throw new BadCredentialsException("Compte non actif");
-        }
-
-        String userType = "EXTERNE".equals(user.getTypeUtilisateur()) ? "EXTERNE" : "INTERNE";
-
-        String access = jwtService.generateAccessToken(
-                user.getId().toString(), user.getEmail(), userType, tenantCode,
-                List.of("ROLE_" + userType));
-
-        logger.info("Refresh TENANT OK pour {} (tenant={})", user.getEmail(), tenantCode);
         return new RefreshResponse(access, "Bearer", jwtService.getAccessTtlSeconds());
     }
 }

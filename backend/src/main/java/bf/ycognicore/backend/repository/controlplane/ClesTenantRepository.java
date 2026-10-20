@@ -40,4 +40,5 @@ public interface ClesTenantRepository extends JpaRepository<ClesTenant, UUID> {
         ClesTenant.TypeCle typeCle,
         ClesTenant.StatutCle statut
     );
+    java.util.Optional<ClesTenant> findByTenantIdAndTypeCleAndVersion(java.util.UUID tenantId, ClesTenant.TypeCle typeCle, int version);
 }

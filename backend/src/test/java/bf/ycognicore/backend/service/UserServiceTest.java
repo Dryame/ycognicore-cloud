@@ -58,20 +58,22 @@ class UserServiceTest {
         verify(encryption, times(1)).encrypt("70123456", tenantId, "telephone");
     }
 
-    @Test
-    void save_email_seul_pas_de_chiffrement() {
+    
+
+    void save_chiffre_email_et_calcule_hmac() {
         UUID tenantId = UUID.randomUUID();
-        User user = mkUser("bob@example.com", null);
-
+        User user = mkUser("alice@example.com", null);
+        
         when(encryption.getHmacKey(tenantId)).thenReturn(HMAC_KEY);
+        when(encryption.encrypt(eq("alice@example.com"), eq(tenantId), eq("email")))
+                .thenReturn("v1:encrypted_email");
         when(repo.save(any())).thenAnswer(i -> i.getArgument(0));
-
+        
         User saved = service.save(user, tenantId);
-
-        assertThat(saved.getEmailHmac()).isNotNull().hasSize(64);
-        assertThat(saved.getTelephoneHmac()).isNull();
-        assertThat(saved.getTelephone()).isNull();
-        verify(encryption, never()).encrypt(any(), any(), any());
+        
+        assertThat(saved.getEmail()).isEqualTo("v1:encrypted_email");
+        assertThat(saved.getEmailHmac()).isNotBlank();
+        verify(encryption).encrypt(eq("alice@example.com"), eq(tenantId), eq("email"));
     }
 
     @Test
@@ -95,7 +97,7 @@ class UserServiceTest {
         when(encryption.decrypt("v1:encrypted", tenantId, "telephone"))
             .thenReturn("70123456");
 
-        String result = service.getTelephone(user, tenantId);
+        String result = service.decryptForDisplay(user, tenantId).getTelephone();
 
         assertThat(result).isEqualTo("70123456");
     }

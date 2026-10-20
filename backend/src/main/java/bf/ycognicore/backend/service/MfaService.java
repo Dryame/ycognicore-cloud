@@ -1,6 +1,8 @@
 package bf.ycognicore.backend.service;
 
 import bf.ycognicore.backend.config.VaultProperties;
+import bf.ycognicore.backend.multitenant.TenantContext;
+import bf.ycognicore.backend.repository.controlplane.TenantRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -12,21 +14,27 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Service
 public class MfaService {
-
     private static final Logger logger = LoggerFactory.getLogger(MfaService.class);
 
     private final VaultTransitService vault;
     private final VaultProperties props;
     private final ObjectMapper objectMapper;
     private final GoogleAuthenticator gAuth = new GoogleAuthenticator();
+    
+    private final UserService userService;
+    private final TenantRepository tenantRepository;
 
-    public MfaService(VaultTransitService vault, VaultProperties props, ObjectMapper objectMapper) {
+    public MfaService(VaultTransitService vault, VaultProperties props, ObjectMapper objectMapper,
+                      UserService userService, TenantRepository tenantRepository) {
         this.vault = vault;
         this.props = props;
         this.objectMapper = objectMapper;
+        this.userService = userService;
+        this.tenantRepository = tenantRepository;
     }
 
     public MfaSetupResult setup(String userEmail) {
@@ -62,35 +70,37 @@ public class MfaService {
         return ok;
     }
 
-
     /**
      * Setup + persistance du secret chiffré dans users.mfa_secret_package.
-     * Ref. : T3.2, V14.
      */
-    public MfaSetupResult setupAndPersist(String userEmail, bf.ycognicore.backend.repository.tenant.UserRepository repo) {
+    public MfaSetupResult setupAndPersist(String userEmail) {
         MfaSetupResult result = setup(userEmail);
         JsonNode encrypted = encryptSecret(result.secret());
-        repo.findByEmail(userEmail).ifPresent(u -> {
+        
+        String tenantCode = TenantContext.getTenantId();
+        UUID tenantId = tenantRepository.findByCode(tenantCode.trim().toUpperCase()).orElseThrow().getId();
+        
+        userService.findByEmail(userEmail, tenantId).ifPresent(u -> {
             u.setMfaSecretPackage(encrypted);
             u.setMfaEnabled(true);
-            repo.save(u);
+            userService.save(u, tenantId);
         });
         return result;
     }
 
     /**
      * Vérifie un code MFA pour un user (charge, déchiffre, vérifie).
-     * Retourne false si user introuvable ou MFA non configuré.
      */
-    public boolean verifyCodeForUser(String email, int code,
-                                     bf.ycognicore.backend.repository.tenant.UserRepository repo) {
-        return repo.findByEmail(email)
-            .filter(u -> u.isMfaEnabled() && u.getMfaSecretPackage() != null)
-            .map(u -> verifyCode(decryptSecret(u.getMfaSecretPackage()), code))
-            .orElse(false);
+    public boolean verifyCodeForUser(String email, int code) {
+        String tenantCode = TenantContext.getTenantId();
+        UUID tenantId = tenantRepository.findByCode(tenantCode.trim().toUpperCase()).orElseThrow().getId();
+        
+        return userService.findByEmail(email, tenantId)
+                .filter(u -> u.isMfaEnabled() && u.getMfaSecretPackage() != null)
+                .map(u -> verifyCode(decryptSecret(u.getMfaSecretPackage()), code))
+                .orElse(false);
     }
 
     public record MfaSetupResult(String secret, String qrUrl) {}
-
     public record MfaVerifyResult(boolean success, String message) {}
 }

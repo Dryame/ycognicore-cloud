@@ -11,14 +11,8 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Rotation manuelle des cles de chiffrement (D-P4-5).
- * Double lecture : ancien ciphertext reste dechiffrable (cle DEPRECATED).
- * Ref. : P4 L2, D-P4-5, ADR-041.
- */
 @Service
 public class EncryptionKeyRotationService {
-
     private static final Logger log = LoggerFactory.getLogger(EncryptionKeyRotationService.class);
 
     private final ClesTenantRepository clesRepository;
@@ -33,17 +27,12 @@ public class EncryptionKeyRotationService {
         this.encryptionService = encryptionService;
     }
 
-    /**
-     * Genere une nouvelle version de cle pour un tenant.
-     * L'ancienne version passe en DEPRECATED (encore dechiffrable).
-     */
     @Transactional(transactionManager = "controlPlaneTransactionManager")
     public ClesTenant rotate(UUID tenantId, ClesTenant.TypeCle typeCle) {
         List<ClesTenant> all = clesRepository
-            .findByTenantIdAndTypeCleOrderByVersionDesc(tenantId, typeCle);
+                .findByTenantIdAndTypeCleOrderByVersionDesc(tenantId, typeCle);
 
-        int nextVersion = all.isEmpty() ? 1
-            : all.get(0).getVersion() + 1;
+        int nextVersion = all.isEmpty() ? 1 : all.get(0).getVersion() + 1;
 
         // Deprecated l'ancienne ACTIVE
         for (ClesTenant old : all) {
@@ -54,7 +43,7 @@ public class EncryptionKeyRotationService {
             }
         }
 
-        // Cree la nouvelle
+        // Crée la nouvelle
         VaultTransitService.DataKeyResult result = vault.generateDataKey();
         ClesTenant cle = new ClesTenant();
         cle.setTenantId(tenantId);
@@ -69,5 +58,23 @@ public class EncryptionKeyRotationService {
 
         log.info("Rotation {} v{} -> v{} pour tenant {}", typeCle, nextVersion - 1, nextVersion, tenantId);
         return saved;
+    }
+
+    /**
+     * Clôture la rotation : passe toutes les clés DEPRECATED en REVOKED.
+     * À appeler une fois que 100% des données ont été rechiffrées.
+     */
+    @Transactional(transactionManager = "controlPlaneTransactionManager")
+    public void finalizeRotation(UUID tenantId, ClesTenant.TypeCle typeCle) {
+        List<ClesTenant> all = clesRepository
+                .findByTenantIdAndTypeCleOrderByVersionDesc(tenantId, typeCle);
+
+        for (ClesTenant cle : all) {
+            if (cle.getStatut() == ClesTenant.StatutCle.DEPRECATED) {
+                cle.setStatut(ClesTenant.StatutCle.REVOKED);
+                clesRepository.save(cle);
+            }
+        }
+        log.info("Clôture de rotation pour tenant {} et type {}", tenantId, typeCle);
     }
 }

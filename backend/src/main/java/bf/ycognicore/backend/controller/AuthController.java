@@ -9,8 +9,10 @@ import bf.ycognicore.backend.service.AuthDispatcherService;
 import bf.ycognicore.backend.service.AuthMfaAwareService;
 import bf.ycognicore.backend.dto.ChangePasswordRequest;
 import bf.ycognicore.backend.repository.tenant.UserRepository;
+import bf.ycognicore.backend.repository.controlplane.TenantRepository;
 import bf.ycognicore.backend.service.SessionService;
 import bf.ycognicore.backend.service.TokenService;
+import bf.ycognicore.backend.service.UserService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import bf.ycognicore.backend.service.RefreshService;
 import jakarta.validation.Valid;
@@ -33,21 +35,27 @@ public class AuthController {
     private final RefreshService refreshService;
     private final PasswordEncoder passwordEncoder;
     private final UserRepository userRepository;
+    private final UserService userService;
+    private final TenantRepository tenantRepository;
     private final SessionService sessionService;
     private final TokenService tokenService;
     private final bf.ycognicore.backend.service.DeviceService deviceService;
 
     public AuthController(AuthMfaAwareService authMfaAware,
-                           RefreshService refreshService,
-                           PasswordEncoder passwordEncoder,
-                           UserRepository userRepository,
-                           SessionService sessionService,
-                           TokenService tokenService,
-                           bf.ycognicore.backend.service.DeviceService deviceService) {
+                          RefreshService refreshService,
+                          PasswordEncoder passwordEncoder,
+                          UserRepository userRepository,
+                          UserService userService,
+                          TenantRepository tenantRepository,
+                          SessionService sessionService,
+                          TokenService tokenService,
+                          bf.ycognicore.backend.service.DeviceService deviceService) {
         this.authMfaAware = authMfaAware;
         this.refreshService = refreshService;
         this.passwordEncoder = passwordEncoder;
         this.userRepository = userRepository;
+        this.userService = userService;
+        this.tenantRepository = tenantRepository;
         this.sessionService = sessionService;
         this.tokenService = tokenService;
         this.deviceService = deviceService;
@@ -58,7 +66,7 @@ public class AuthController {
                                                jakarta.servlet.http.HttpServletRequest httpReq) {
         LoginResponse response = authMfaAware.authenticate(req);
 
-        // MFA requis : pas de session tant que MFA non validee
+        // MFA requis : pas de session tant que MFA non validée
         if (Boolean.TRUE.equals(response.mfaRequired())) {
             return ResponseEntity.ok(response);
         }
@@ -77,27 +85,27 @@ public class AuthController {
 
             // Appareil : resolveOrCreate
             UUID appareilId = deviceService.resolveOrCreate(
-                tenantCode, userId, userAgent, acceptLang, ip);
+                    tenantCode, userId, userAgent, acceptLang, ip);
 
-            // Creer la session avec le refresh placeholder
+            // Créer la session avec le refresh placeholder
             UUID sessionId = sessionService.create(tenantCode, userId, ip,
-                userAgent, appareilId, response.refreshToken());
+                    userAgent, appareilId, response.refreshToken());
 
             // Regenerer access + refresh avec jti = sessionId
             String newAccess = tokenService.generateAccessToken(userId,
-                response.user().email(), response.user().userType(), tenantCode,
-                java.util.List.of(response.user().userType()), sessionId);
+                    response.user().email(), response.user().userType(), tenantCode,
+                    java.util.List.of(response.user().userType()), sessionId);
             String newRefresh = tokenService.generateRefreshToken(userId, sessionId);
 
             // Rotation : remplacer le hash placeholder par le vrai
             sessionService.rotateRefresh(tenantCode, sessionId, newRefresh);
 
             return ResponseEntity.ok(new LoginResponse(
-                newAccess, newRefresh, "Bearer", 1800L, response.user(), false, null));
+                    newAccess, newRefresh, "Bearer", 1800L, response.user(), false, null));
 
         } catch (Exception e) {
-            logger.warn("Creation session apres login echouee : {}", e.getMessage());
-            // Fail-soft : on retourne la reponse initiale (tokens sans jti)
+            logger.warn("Création session après login échouée : {}", e.getMessage());
+            // Fail-soft : on retourne la réponse initiale (tokens sans jti)
             return ResponseEntity.ok(response);
         }
     }
@@ -157,10 +165,17 @@ public class AuthController {
             return ResponseEntity.status(400).body(Map.of("error", "Ancien mot de passe incorrect"));
         }
 
-        // 2. Hacher et mettre a jour
+        // 2. Hacher et mettre à jour
         user.setMotDePasseHash(passwordEncoder.encode(req.nouveauMotDePasse()));
         user.setMotDePasseAChanger(false);
-        userRepository.save(user);
+
+        // Récupération de l'UUID du tenant pour passer par le service sécurisé (L3.4)
+        String tenantCode = TenantContext.getTenantId();
+        UUID tenantId = tenantRepository.findByCode(tenantCode)
+                .orElseThrow(() -> new IllegalStateException("Tenant introuvable"))
+                .getId();
+        
+        userService.save(user, tenantId); // Utilisation du service pour HMAC/Chiffrement
 
         // 3. Revoquer toutes les sessions sauf la courante
         UUID currentSessionId = null;
@@ -170,19 +185,18 @@ public class AuthController {
                 currentSessionId = tokenService.extractSessionIdFromJtiOrId(jti);
             } catch (Exception ignored) {}
         }
-        String tenantCode = TenantContext.getTenantId();
+
         if (tenantCode != null) {
             try {
                 sessionService.revokeAll(tenantCode, user.getId(),
-                    "CHANGEMENT_MDP", currentSessionId);
+                        "CHANGEMENT_MDP", currentSessionId);
             } catch (Exception e) {
-                logger.warn("revokeAll apres change MDP echoue : {}", e.getMessage());
+                logger.warn("revokeAll après change MDP échoue : {}", e.getMessage());
                 return ResponseEntity.status(503).body(Map.of("error", "Service indisponible"));
             }
         }
 
         logger.info("Mot de passe change user={}", user.getId());
-        return ResponseEntity.ok(Map.of("success", true, "message", "Mot de passe change"));
+        return ResponseEntity.ok(Map.of("success", true, "message", "Mot de passe changé"));
     }
-
 }

@@ -58,8 +58,8 @@ public class EncryptionMigrationRunner implements CommandLineRunner {
             log.info("--- Migration tenant {} (code={}) ---", tenantId, tenantCode);
             TenantContext.setTenantId(tenantCode);
             try {
-                totalTiers += migrationService.migrateTiers(tenantId);
-                totalUsers += migrationService.migrateUsers(tenantId);
+                totalTiers += migrationService.migrateTiersInitial(tenantId);
+                totalUsers += migrationService.migrateUsersInitial(tenantId);
             } finally {
                 TenantContext.clear();
             }

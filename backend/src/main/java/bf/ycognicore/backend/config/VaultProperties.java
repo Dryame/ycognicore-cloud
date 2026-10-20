@@ -14,6 +14,7 @@ public class VaultProperties {
     private String url = "http://localhost:8200";
     private String token = "";
     private String transitKey = "ycc-mfa-key";
+    private String masterKey = "ycc-master-key";
     private String issuer = "yCogniCore Cloud";
 
     public String getUrl() { return url; }
@@ -22,6 +23,8 @@ public class VaultProperties {
     public void setToken(String token) { this.token = token; }
     public String getTransitKey() { return transitKey; }
     public void setTransitKey(String transitKey) { this.transitKey = transitKey; }
+    public String getMasterKey() { return masterKey; }
+    public void setMasterKey(String masterKey) { this.masterKey = masterKey; }
     public String getIssuer() { return issuer; }
     public void setIssuer(String issuer) { this.issuer = issuer; }
 }

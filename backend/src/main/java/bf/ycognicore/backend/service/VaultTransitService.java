@@ -25,9 +25,12 @@ public class VaultTransitService {
 
     private final RestClient client;
     private final String transitKey;
+    private final String masterKey;
 
     public VaultTransitService(VaultProperties props) {
         this.transitKey = props.getTransitKey();
+        this.masterKey = props.getMasterKey() != null
+            ? props.getMasterKey() : "ycc-master-key";
         this.client = RestClient.builder()
                 .baseUrl(props.getUrl())
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
@@ -81,4 +84,59 @@ public class VaultTransitService {
         logger.debug("Vault decrypt OK (key={})", transitKey);
         return new String(Base64.getDecoder().decode(b64), StandardCharsets.UTF_8);
     }
+
+    /**
+     * Genere une cle de donnees AES-256 via Vault Transit.
+     * Le plaintext est en memoire ; le ciphertext (vault:vN:...) est a persister.
+     * Ref. : D-P4-1.
+     */
+    @SuppressWarnings("unchecked")
+    public DataKeyResult generateDataKey() {
+        Map<String, Object> resp = client.post()
+            .uri("/v1/transit/datakey/plaintext/{key}", masterKey)
+            .body(Map.of())
+            .retrieve()
+            .body(Map.class);
+
+        if (resp == null || resp.get("data") == null) {
+            throw new IllegalStateException("Reponse Vault datakey invalide");
+        }
+        Map<String, Object> data = (Map<String, Object>) resp.get("data");
+        String plaintextB64 = (String) data.get("plaintext");
+        String ciphertext = (String) data.get("ciphertext");
+        if (plaintextB64 == null || ciphertext == null) {
+            throw new IllegalStateException("Reponse Vault datakey incomplete");
+        }
+        byte[] plaintext = Base64.getDecoder().decode(plaintextB64);
+        logger.debug("Vault datakey genere ({} octets, {})", plaintext.length, ciphertext);
+        return new DataKeyResult(plaintext, ciphertext);
+    }
+
+    /**
+     * Dechiffre une cle de donnees enveloppee (vault:vN:...).
+     * Retourne les 32 octets de la cle AES-256.
+     * Ref. : D-P4-1.
+     */
+    @SuppressWarnings("unchecked")
+    public byte[] decryptWrapped(String ciphertext) {
+        Map<String, Object> body = Map.of("ciphertext", ciphertext);
+        Map<String, Object> resp = client.post()
+            .uri("/v1/transit/decrypt/{key}", masterKey)
+            .body(body)
+            .retrieve()
+            .body(Map.class);
+
+        if (resp == null || resp.get("data") == null) {
+            throw new IllegalStateException("Reponse Vault decrypt invalide");
+        }
+        Map<String, Object> data = (Map<String, Object>) resp.get("data");
+        String plaintextB64 = (String) data.get("plaintext");
+        if (plaintextB64 == null) {
+            throw new IllegalStateException("Reponse Vault decrypt sans plaintext");
+        }
+        return Base64.getDecoder().decode(plaintextB64);
+    }
+
+    /** Resultat d'une generation de cle : plaintext AES + ciphertext enveloppe. */
+    public record DataKeyResult(byte[] plaintext, String ciphertext) {}
 }

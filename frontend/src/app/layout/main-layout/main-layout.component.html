@@ -47,10 +47,11 @@
       aria-label="Navigation principale"
       [class.open]="isSidebarOpen()">
       <ul class="nav-list">
-        <li><a href="/dashboard" class="nav-link">Tableau de bord</a></li>
-        <li><a href="/tenants" class="nav-link">Gestion des Tenants</a></li>
-        <li><a href="/users" class="nav-link">Utilisateurs</a></li>
-        <li><a href="/settings" class="nav-link">Paramètres</a></li>
+        <li><a routerLink="/dashboard" class="nav-link">Tableau de bord</a></li>
+        <li><a routerLink="/tenants" class="nav-link">Gestion des Tenants</a></li>
+        <li><a routerLink="/users" class="nav-link">Utilisateurs</a></li>
+    <li><a routerLink="/console-securite" class="nav-link">Console de sécurité</a></li>
+        <li><a routerLink="/settings" class="nav-link">Paramètres</a></li>
       </ul>
     </nav>
 

@@ -18,6 +18,7 @@ export class LoginComponent {
   private readonly router = inject(Router);
 
   readonly isLoading = signal(false);
+  readonly showPassword = signal(false);
   readonly errorMessage = signal<string | null>(null);
 
   readonly loginForm: FormGroup = this.fb.group({
@@ -35,6 +36,10 @@ export class LoginComponent {
     const ctrl = this.loginForm.get('password');
     return ctrl ? ctrl.invalid && ctrl.touched : false;
   });
+
+  togglePassword(): void {
+    this.showPassword.update(v => !v);
+  }
 
   onSubmit(): void {
     if (this.loginForm.invalid) {

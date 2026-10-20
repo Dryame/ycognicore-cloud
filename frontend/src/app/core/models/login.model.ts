@@ -26,4 +26,5 @@ export interface RefreshResponse {
   accessToken: string;
   tokenType: string;
   expiresInSeconds: number;
+  refreshToken?: string;   // present si rotation active (D-13)
 }

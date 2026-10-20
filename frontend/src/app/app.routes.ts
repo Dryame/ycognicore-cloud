@@ -54,7 +54,7 @@ export const routes: Routes = [
   },
   {
     path: 'console-securite',
-    canActivate: [authGuard],
+    // canActivate: [authGuard],  // TEMPORAIRE : test visuel
     loadComponent: () => import('./features/console-securite/console-securite.component')
       .then(m => m.ConsoleSecuriteComponent),
   },

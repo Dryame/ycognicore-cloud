@@ -1,12 +1,12 @@
 import { Component, signal, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterOutlet } from '@angular/router';
+import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 
 @Component({
   selector: 'app-main-layout',
   standalone: true,
-  imports: [CommonModule, RouterOutlet],
+  imports: [RouterLink, RouterLinkActive, CommonModule, RouterOutlet],
   templateUrl: './main-layout.component.html',
   styleUrls: ['./main-layout.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

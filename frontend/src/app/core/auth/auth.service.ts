@@ -9,10 +9,9 @@ import {
 import { TokenService } from './token.service';
 
 /**
- * Authentification — D-13 :
- *  - access token en memoire (TokenService)
- *  - refresh token en cookie HttpOnly (emis par le backend)
- *  - withCredentials sur /api/auth/* et /api/mfa/*
+ * Authentification — D-13 partiel.
+ * Access token en memoire, refresh en sessionStorage (workaround).
+ * Ref. : D-13, C44.
  */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -21,7 +20,6 @@ export class AuthService {
   private readonly tokenService = inject(TokenService);
 
   private readonly _currentUser = signal<UserInfo | null>(this.loadUser());
-
   readonly currentUser = this._currentUser.asReadonly();
 
   getAccessToken(): string | null {
@@ -40,13 +38,12 @@ export class AuthService {
     );
   }
 
-  /**
-   * Termine la connexion apres validation MFA (challenge).
-   * Le backend emet access + refresh ; le refresh est pose en cookie HttpOnly.
-   */
   completeLogin(res: LoginResponse): void {
     if (res.accessToken) {
       this.tokenService.set(res.accessToken);
+    }
+    if (res.refreshToken) {
+      this.tokenService.setRefresh(res.refreshToken);   // ← AJOUT
     }
     if (res.user) {
       this._currentUser.set(res.user);
@@ -55,18 +52,23 @@ export class AuthService {
   }
 
   refresh(): Observable<RefreshResponse> {
+    const storedRefresh = this.tokenService.getRefresh();
     return this.http.post<RefreshResponse>(
       `${environment.apiUrl}/api/auth/refresh`,
-      {},
+      { refreshToken: storedRefresh },   // ← AJOUT body
       { withCredentials: true }
-    ).pipe(tap(res => this.tokenService.set(res.accessToken)));
+    ).pipe(
+      tap(res => {
+        if (res.accessToken) this.tokenService.set(res.accessToken);
+        if (res.refreshToken) this.tokenService.setRefresh(res.refreshToken);
+      })
+    );
   }
 
   logout(): void {
-    this.tokenService.clear();
+    this.tokenService.clearAll();
     this._currentUser.set(null);
     localStorage.removeItem(environment.userKey);
-    // Le cookie refresh est invalide cote serveur via /api/auth/logout (a venir L6)
     this.router.navigate(['/login']);
   }
 

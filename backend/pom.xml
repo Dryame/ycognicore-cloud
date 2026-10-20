@@ -165,6 +165,13 @@
             <artifactId>geoip2</artifactId>
             <version>${geoip2.version}</version>
         </dependency>
+
+        <!-- Cache Caffeine (cles de chiffrement) — P4 D-P4-7 -->
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+            <version>3.1.8</version>
+        </dependency>
         <!-- ArchUnit - controle architecture (L2) -->
         <dependency>
             <groupId>com.tngtech.archunit</groupId>
@@ -174,6 +181,26 @@
         </dependency>
     </dependencies>
     <build>
+        <resources>
+            <!-- Ressources Spring Boot (par defaut) -->
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+            </resource>
+            <!-- Migrations tenant : source unique = racine du depot -->
+            <resource>
+                <directory>${project.basedir}/../db/migration/tenant</directory>
+                <targetPath>db/migration/tenant</targetPath>
+                <filtering>false</filtering>
+            </resource>
+            <!-- Migrations control plane : source unique = racine du depot -->
+            <resource>
+                <directory>${project.basedir}/../db/migration/control-plane</directory>
+                <targetPath>db/migration/control-plane</targetPath>
+                <filtering>false</filtering>
+            </resource>
+        </resources>
+
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>

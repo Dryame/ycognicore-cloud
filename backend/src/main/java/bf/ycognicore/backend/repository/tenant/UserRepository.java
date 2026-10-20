@@ -18,4 +18,10 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     List<User> findByTypeUtilisateur(String typeUtilisateur);
 
     boolean existsByEmail(String email);
+
+    /** Recherche par HMAC de l'email (chiffrement D-13, ADR-042). */
+    java.util.Optional<User> findByEmailHmac(String emailHmac);
+
+    /** Recherche par HMAC du telephone (chiffrement D-13, ADR-042). */
+    java.util.List<User> findByTelephoneHmac(String telephoneHmac);
 }

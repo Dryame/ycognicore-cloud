@@ -38,6 +38,12 @@ public class User {
     @Column(name = "telephone", length = 30)
     private String telephone;
 
+    @Column(name = "email_hmac", length = 64)
+    private String emailHmac;
+
+    @Column(name = "telephone_hmac", length = 64)
+    private String telephoneHmac;
+
     @Column(name = "type_utilisateur", nullable = false, length = 30)
     private String typeUtilisateur = "INTERNE";
 
@@ -118,4 +124,12 @@ public class User {
     public void setMotifVerrouillage(String v) { this.motifVerrouillage = v; }
     public OffsetDateTime getDateCreation() { return dateCreation; }
     public void setDateCreation(OffsetDateTime v) { this.dateCreation = v; }
+
+    public String getEmailHmac() { return emailHmac; }
+    public void setEmailHmac(String emailHmac) { this.emailHmac = emailHmac; }
+
+    public String getTelephoneHmac() { return telephoneHmac; }
+    public void setTelephoneHmac(String telephoneHmac) {
+        this.telephoneHmac = telephoneHmac;
+    }
 }

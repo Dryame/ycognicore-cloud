@@ -162,6 +162,17 @@ public class DataEncryptionService {
         }
     }
 
+    /**
+     * Retourne la cle HMAC du tenant (32 octets), dechiffree depuis Vault.
+     * Cree la cle si absente. Cache Caffeine (D-P4-7).
+     * Ref. : D-P4-4, ADR-042.
+     */
+    @Transactional(transactionManager = "controlPlaneTransactionManager")
+    public byte[] getHmacKey(UUID tenantId) {
+        ClesTenant cle = getOrCreateActiveKey(tenantId, ClesTenant.TypeCle.HMAC);
+        return getDataKey(cle);
+    }
+
     /** Invalide le cache pour un tenant (apres rotation). */
     public void invalidateCache(UUID tenantId) {
         cache.asMap().keySet().removeIf(k -> k.tenantId().equals(tenantId));

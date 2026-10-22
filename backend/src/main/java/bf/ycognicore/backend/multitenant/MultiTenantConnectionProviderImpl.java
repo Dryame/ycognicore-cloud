@@ -16,13 +16,6 @@ import java.sql.SQLFeatureNotSupportedException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Fournit a Hibernate une connexion JDBC vers la base du tenant courant.
- * Implemente egalement DataSource pour pouvoir etre passe comme
- * dataSource() a l'EMF tenant.
- *
- * Ref. : ADR-006, ADR-011, NFR-SEC-29
- */
 @Component
 public class MultiTenantConnectionProviderImpl
         implements MultiTenantConnectionProvider<String>, DataSource {
@@ -75,11 +68,10 @@ public class MultiTenantConnectionProviderImpl
             HikariConfig hc = new HikariConfig();
             hc.setJdbcUrl(cfg.jdbcUrl());
             String effectiveUser = (cfg.dbUser() != null && !cfg.dbUser().isBlank())
-                ? cfg.dbUser()
-                : "postgres";
+                    ? cfg.dbUser()
+                    : "postgres";
             if ("postgres".equals(effectiveUser)) {
-                logger.warn("C40 : tenant {} utilise 'postgres' (superuser). " +
-                    "Configurer db_user=ycc_tenant_app dans tenant_databases.", tenantId);
+                logger.warn("C40 : tenant {} utilise 'postgres' (superuser). Configurer db_user=ycc_tenant_app.", tenantId);
             } else {
                 logger.debug("Pool tenant={} user={} (RBAC strict)", tenantId, effectiveUser);
             }
@@ -99,8 +91,8 @@ public class MultiTenantConnectionProviderImpl
     @Override
     public Connection getAnyConnection() throws SQLException {
         if (poolsByTenant.isEmpty()) {
-            throw new SQLException(
-                    "Aucun pool tenant initialise - getAnyConnection() appele hors contexte");
+            logger.warn("Aucun pool tenant initialise. Utilisation du pool par defaut (demo001) pour l'initialisation.");
+            return poolFor("DEMO001").getConnection();
         }
         return poolsByTenant.values().iterator().next().getConnection();
     }

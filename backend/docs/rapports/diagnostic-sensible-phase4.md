@@ -1,0 +1,2 @@
+- **[OK]** Compilation et tests : BUILD SUCCESS
+- **[OK]** [INFO] Tests run: 113, Failures: 0, Errors: 0, Skipped: 3
